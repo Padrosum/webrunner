@@ -41,7 +41,16 @@ start_tor() {
     return 0
   fi
   tor --verify-config -f "$TORRC" >/dev/null
-  tor -f "$TORRC" --RunAsDaemon 1
+  rm -f "$PIDFILE"
+  nohup tor -f "$TORRC" --RunAsDaemon 0 >/dev/null 2>&1 &
+  tor_pid_started=$!
+  printf '%s\n' "$tor_pid_started" > "$PIDFILE"
+  sleep 1
+  if ! kill -0 "$tor_pid_started" 2>/dev/null; then
+    rm -f "$PIDFILE"
+    echo "Tor başlatılamadı." >&2
+    return 1
+  fi
   echo "Tor başlatıldı; devre hazır olunca Tor çıkışı kullanılacak."
 }
 
