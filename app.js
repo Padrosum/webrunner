@@ -266,7 +266,7 @@
         type: "virtio",
         relay_url: NETWORK_RELAY,
       },
-      cmdline: "rw root=host9p rootfstype=9p rootflags=trans=virtio,version=9p2000.L,cache=loose modules=virtio_pci,virtio_net,9p,9pnet_virtio console=ttyS0,115200n8 init=/bin/sh tsc=reliable ipv6.disable=1",
+      cmdline: "rw root=host9p rootfstype=9p rootflags=trans=virtio,version=9p2000.L,cache=loose modules=virtio_pci,virtio_net,9p,9pnet_virtio console=ttyS0,115200n8 init=/usr/bin/webrunner-tty tsc=reliable ipv6.disable=1",
       autostart: true,
     });
 

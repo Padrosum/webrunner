@@ -1,9 +1,11 @@
 FROM i386/alpine:latest AS holyp-build
 
-RUN apk add --no-cache cargo rust
+RUN apk add --no-cache cargo rust build-base
 COPY .github/docker/alpine/holyp-src /tmp/holyp
+COPY tools/tty-sh.c /tmp/tty-sh.c
 WORKDIR /tmp/holyp
-RUN cargo build --release
+RUN cargo build --release \
+ && cc -O2 -static -s -o /tmp/webrunner-tty /tmp/tty-sh.c
 
 FROM i386/alpine:latest
 
@@ -23,6 +25,7 @@ RUN apk add --no-cache \
       w3m
 
 COPY --from=holyp-build /tmp/holyp/target/release/holyp /usr/bin/holyp
+COPY --from=holyp-build /tmp/webrunner-tty /usr/bin/webrunner-tty
 COPY tools/webrunner-tor /usr/bin/webrunner-tor
 COPY tools/tft /usr/bin/tft
 COPY tools/torrc /etc/tor/torrc
@@ -32,7 +35,7 @@ COPY tools/THIRD_PARTY_NOTICES.md /usr/share/doc/webrunner/THIRD_PARTY_NOTICES.m
 RUN for tool in net-info tor-info about; do \
       printf '%s\n' '#!/bin/sh' "exec /usr/bin/holyp /usr/share/webrunner/holyc/$tool.HC \"\$@\"" > "/usr/bin/hc-$tool"; \
     done \
- && chmod +x /usr/bin/holyp /usr/bin/webrunner-tor /usr/bin/tft /usr/bin/hc-* \
+ && chmod +x /usr/bin/holyp /usr/bin/webrunner-tty /usr/bin/webrunner-tor /usr/bin/tft /usr/bin/hc-* \
  && mkdir -p /run/tor /var/log/tor /var/lib/tor \
  && chown -R tor:tor /run/tor /var/log/tor /var/lib/tor \
  && tor --verify-config -f /etc/tor/torrc \
