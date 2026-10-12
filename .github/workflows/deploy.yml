@@ -49,7 +49,7 @@ jobs:
           git -C "$RUNNER_TEMP/holyp" archive --format=tar HEAD \
             | tar -x -C .github/docker/alpine/holyp-src
           git -C "$RUNNER_TEMP/holyp" archive \
-            --format=tar.gz --output=dist/third-party/holyp-source.tar.gz HEAD
+            --format=tar.gz --output="$GITHUB_WORKSPACE/dist/third-party/holyp-source.tar.gz" HEAD
           printf '%s\n' "$HOLYP_COMMIT" > dist/third-party/holyp-commit.txt
           cp tools/THIRD_PARTY_NOTICES.md dist/third-party/README.md
           docker build --pull --platform linux/386 \
