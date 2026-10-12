@@ -3,7 +3,7 @@
 
   const LOCAL = "./assets";
   const REMOTE = "https://copy.sh/v86";
-  const ALPINE_REMOTE = "https://dl-cdn.alpinelinux.org/alpine/v3.24/releases/x86/netboot";
+  const ALPINE_REMOTE = "https://dl-cdn.alpinelinux.org/alpine/latest-stable/releases/x86/netboot";
 
   const el = (id) => document.getElementById(id);
   const boot = el("terminal-boot");
@@ -16,6 +16,11 @@
   const startButton = el("hero-start");
   const restartButton = el("restart-button");
   const stopButton = el("stop-button");
+  const commandForm = el("command-form");
+  const commandInput = el("command-input");
+  const commandSubmit = el("command-submit");
+  const bootVersion = el("boot-version");
+  const runtimeVersion = el("runtime-version");
   const toast = el("toast");
 
   let emulator = null;
@@ -43,7 +48,22 @@
     statusDot.classList.toggle("is-live", running);
     restartButton.disabled = !running;
     stopButton.disabled = !running;
+    commandInput.disabled = !running;
+    commandSubmit.disabled = !running;
     startButton.disabled = running || isStarting;
+  }
+
+  async function loadRuntimeMeta() {
+    try {
+      const response = await fetch("./runtime.json", { cache: "no-store" });
+      if (!response.ok) return;
+      const meta = await response.json();
+      const label = meta.alpine_version || "stable";
+      bootVersion.textContent = label;
+      runtimeVersion.textContent = `Alpine ${label}`;
+    } catch (_) {
+      // Local source preview may not have the generated runtime metadata yet.
+    }
   }
 
   function loadScript(url) {
@@ -175,21 +195,29 @@
   }
 
   function sendCommand(command) {
+    const normalizedCommand = command.trim();
+    if (!normalizedCommand) return;
     if (!emulator) {
-      showToast("Önce Alpine terminalini başlatın.");
-      start();
+      showToast(isStarting ? "Alpine açılıyor; terminal hazır olduğunda tekrar deneyin." : "Önce Alpine terminalini başlatın.");
+      if (!isStarting) start();
       return;
     }
     if (typeof emulator.keyboard_send_text === "function") {
-      emulator.keyboard_send_text(`${command}\n`);
+      emulator.keyboard_send_text(`${normalizedCommand}\n`);
     } else if (typeof emulator.serial0_send === "function") {
-      emulator.serial0_send(`${command}\n`);
+      emulator.serial0_send(`${normalizedCommand}\n`);
     }
+    commandInput.value = "";
   }
 
   startButton.addEventListener("click", start);
   restartButton.addEventListener("click", restart);
   stopButton.addEventListener("click", stop);
+  commandForm.addEventListener("submit", (event) => {
+    event.preventDefault();
+    sendCommand(commandInput.value);
+    commandInput.focus();
+  });
 
   document.querySelectorAll("[data-command]").forEach((button) => {
     button.addEventListener("click", () => sendCommand(button.dataset.command));
@@ -197,5 +225,6 @@
 
   // Sayfa açıldığında terminali otomatik olarak yükle; kullanıcı düşük hareket
   // tercih ediyorsa aynı davranış korunur çünkü bu bir ekran geçişi değil runtime boot'udur.
+  loadRuntimeMeta();
   window.setTimeout(start, 650);
 })();

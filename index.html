@@ -68,11 +68,11 @@
                   <span>   / ____ \</span>
                   <span>  /_/    \_\</span>
                 </div>
-                <div class="boot-title">Alpine Linux <span>3.24</span></div>
+                <div class="boot-title">Alpine Linux <span id="boot-version">stable</span></div>
                 <div class="boot-message" id="boot-message">emülatör hazırlanıyor...</div>
                 <div class="boot-progress"><span id="boot-progress-bar"></span></div>
               </div>
-              <div class="screen-container" id="screen_container" aria-label="Alpine Linux terminali">
+              <div class="screen-container" id="screen_container" tabindex="0" aria-label="Alpine Linux terminali">
                 <div class="screen-text" style="white-space: pre; font: 14px monospace; line-height: 14px"></div>
                 <canvas style="display: none"></canvas>
               </div>
@@ -81,9 +81,23 @@
                 <p>Başlat düğmesine basarak Alpine Linux’u açın.</p>
               </div>
             </div>
+            <form class="command-bar" id="command-form">
+              <span class="input-prompt" aria-hidden="true">›</span>
+              <input
+                id="command-input"
+                type="text"
+                placeholder="Alpine komutu yazın ve Enter'a basın"
+                autocomplete="off"
+                autocapitalize="off"
+                spellcheck="false"
+                aria-label="Alpine komutu"
+                disabled
+              />
+              <button id="command-submit" type="submit" disabled>gönder ↵</button>
+            </form>
             <div class="terminal-footer">
               <span><i class="status-dot" id="status-dot"></i><span id="runtime-label">runtime bekliyor</span></span>
-              <span class="terminal-hint">klavye girişi için terminale tıklayın</span>
+              <span class="terminal-hint">komut kutusunu veya terminali kullanın</span>
             </div>
           </div>
 
@@ -107,7 +121,7 @@
             <div class="side-block specs-block">
               <div class="section-label">runtime</div>
               <dl class="spec-list">
-                <div><dt>sürüm</dt><dd>Alpine 3.24</dd></div>
+                <div><dt>sürüm</dt><dd id="runtime-version">Alpine stable</dd></div>
                 <div><dt>mimari</dt><dd>x86 / 32-bit</dd></div>
                 <div><dt>bellek</dt><dd>512 MB</dd></div>
                 <div><dt>altyapı</dt><dd>v86 + WASM</dd></div>

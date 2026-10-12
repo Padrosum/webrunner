@@ -4,6 +4,9 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+  schedule:
+    # Alpine latest-stable runtime is refreshed daily without a code push.
+    - cron: "17 3 * * *"
 
 permissions:
   contents: read
@@ -33,7 +36,15 @@ jobs:
           cp index.html styles.css app.js dist/
 
           V86_BASE="https://copy.sh/v86"
-          ALPINE_BASE="https://dl-cdn.alpinelinux.org/alpine/v3.24/releases/x86/netboot"
+          ALPINE_BASE="https://dl-cdn.alpinelinux.org/alpine/latest-stable/releases/x86/netboot"
+
+          # Resolve the version for display while keeping the download on the
+          # moving latest-stable channel.
+          ALPINE_KERNEL_URL=$(curl --fail --location --retry 4 --retry-all-errors --silent --show-error \
+            -o /dev/null -w '%{url_effective}' "$ALPINE_BASE/vmlinuz-lts")
+          ALPINE_VERSION=$(printf '%s' "$ALPINE_KERNEL_URL" | sed -n 's#.*alpine/\(v[^/]\+\)/.*#\1#p')
+          ALPINE_VERSION=${ALPINE_VERSION:-latest-stable}
+          printf '{"alpine_version":"%s"}\n' "$ALPINE_VERSION" > dist/runtime.json
 
           curl --fail --location --retry 4 --retry-all-errors --silent --show-error \
             "$V86_BASE/build/libv86.js" -o dist/assets/libv86.js
