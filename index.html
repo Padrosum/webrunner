@@ -83,20 +83,25 @@
               </div>
             </div>
             <form class="command-bar" id="command-form">
-              <span class="input-prompt" aria-hidden="true">›</span>
-              <input
-                id="command-input"
-                type="text"
-                placeholder="Alpine komutu yazın ve Enter'a basın"
-                autocomplete="off"
-                autocapitalize="off"
-                spellcheck="false"
-                aria-label="Alpine komutu"
-                disabled
-              />
-              <button id="command-submit" type="submit" disabled>gönder ↵</button>
-              <button id="ctrl-c-button" class="interrupt-button" type="button" aria-label="Alpine komutunu CTRL+C ile durdur" disabled>CTRL+C</button>
-              <button id="ctrl-z-button" class="interrupt-button" type="button" aria-label="Alpine komutunu CTRL+Z ile durdur" disabled>CTRL+Z</button>
+              <div class="command-entry">
+                <span class="input-prompt" aria-hidden="true">›</span>
+                <input
+                  id="command-input"
+                  type="text"
+                  placeholder="komut yazın…"
+                  autocomplete="off"
+                  autocapitalize="off"
+                  spellcheck="false"
+                  aria-label="Alpine komutu"
+                  disabled
+                />
+              </div>
+              <div class="command-actions" aria-label="Komut kontrolleri">
+                <button id="command-submit" type="submit" disabled>gönder ↵</button>
+                <button id="ctrl-c-button" class="interrupt-button" type="button" aria-label="Alpine komutunu CTRL+C ile durdur" disabled>CTRL+C</button>
+                <button id="ctrl-z-button" class="interrupt-button" type="button" aria-label="Alpine komutunu CTRL+Z ile durdur" disabled>CTRL+Z</button>
+              </div>
+              <div class="command-hint" aria-hidden="true"><kbd>Enter</kbd> çalıştır <kbd>↑ ↓</kbd> geçmiş <kbd>Esc</kbd> temizle</div>
             </form>
             <div class="terminal-footer">
               <span><i class="status-dot" id="status-dot"></i><span id="runtime-label">runtime bekliyor</span></span>
@@ -122,6 +127,7 @@
                 <div><dt>mimari</dt><dd>x86 / 32-bit</dd></div>
                 <div><dt>bellek</dt><dd>512 MB</dd></div>
                 <div><dt>altyapı</dt><dd>v86 + WASM</dd></div>
+                <div><dt>ağ</dt><dd>virtio + DHCP</dd></div>
               </dl>
             </div>
 

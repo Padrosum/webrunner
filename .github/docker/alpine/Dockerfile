@@ -11,13 +11,19 @@ RUN apk add --no-cache \
 
 RUN echo 'root:' | chpasswd \
  && echo 'localhost' > /etc/hostname \
- && setup-hostname localhost
+ && setup-hostname localhost \
+ && printf '%s\n' \
+      'auto lo' \
+      'iface lo inet loopback' \
+      '' \
+      'auto eth0' \
+      'iface eth0 inet dhcp' \
+ > /etc/network/interfaces
 
 RUN printf '%s\n' \
-      'rmmod ne2k-pci && modprobe ne2k-pci' \
-      'rmmod virtio-net && modprobe virtio-net' \
+      'modprobe virtio_net 2>/dev/null || true' \
       'hwclock -s' \
-      'setup-interfaces -a -r' \
+      'ifup eth0' \
  > /root/networking.sh \
  && chmod +x /root/networking.sh
 

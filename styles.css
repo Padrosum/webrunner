@@ -121,16 +121,21 @@ h1 em, h2 em { font-family: Georgia, serif; font-weight: 400; letter-spacing: -.
 .terminal-empty[hidden] { display: none; }
 .terminal-empty p { margin: 0; }
 .empty-prompt { color: var(--acid); font-size: 17px; }
-.command-bar { display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 8px 14px; border-top: 1px solid rgba(230, 243, 210, .11); background: #101413; }
-.input-prompt { color: var(--acid); font: 18px var(--mono); }
-.command-bar input { min-width: 0; flex: 1; border: 0; outline: 0; background: transparent; color: var(--terminal-text); font: 11px var(--mono); }
+.command-bar { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "entry actions" "hint actions"; align-items: center; gap: 4px 10px; min-height: 66px; padding: 9px 14px; border-top: 1px solid rgba(230, 243, 210, .11); background: #101413; }
+.command-entry { grid-area: entry; display: flex; align-items: center; min-width: 0; padding: 8px 10px; border: 1px solid rgba(230, 243, 210, .12); background: rgba(0, 0, 0, .13); transition: border-color .18s ease, background .18s ease; }
+.command-entry:focus-within { border-color: var(--acid); background: rgba(213, 243, 75, .05); }
+.input-prompt { margin-right: 8px; color: var(--acid); font: 18px var(--mono); }
+.command-bar input { min-width: 0; width: 100%; border: 0; outline: 0; background: transparent; color: var(--terminal-text); font: 11px var(--mono); }
 .command-bar input::placeholder { color: #596259; }
 .command-bar input:disabled { cursor: not-allowed; opacity: .45; }
-.command-bar button { padding: 8px 10px; border: 1px solid rgba(230, 243, 210, .16); background: transparent; color: var(--acid); cursor: pointer; font: 10px var(--mono); text-transform: uppercase; letter-spacing: .04em; }
-.command-bar button:hover:not(:disabled) { background: var(--acid); color: var(--ink); }
-.command-bar button:disabled { cursor: not-allowed; opacity: .35; }
-.command-bar .interrupt-button { color: #ff8a72; }
-.command-bar .interrupt-button:hover:not(:disabled) { background: #ff8a72; color: var(--ink); }
+.command-actions { grid-area: actions; display: flex; gap: 6px; }
+.command-actions button { padding: 9px 10px; border: 1px solid rgba(230, 243, 210, .16); background: transparent; color: var(--acid); cursor: pointer; font: 10px var(--mono); text-transform: uppercase; letter-spacing: .04em; }
+.command-actions button:hover:not(:disabled) { background: var(--acid); color: var(--ink); }
+.command-actions button:disabled { cursor: not-allowed; opacity: .35; }
+.command-actions .interrupt-button { color: #ff8a72; }
+.command-actions .interrupt-button:hover:not(:disabled) { background: #ff8a72; color: var(--ink); }
+.command-hint { grid-area: hint; color: #4e574e; font: 9px var(--mono); letter-spacing: .02em; }
+.command-hint kbd { padding: 2px 4px; border: 1px solid rgba(230, 243, 210, .13); color: var(--terminal-muted); font: inherit; }
 .terminal-footer { display: flex; align-items: center; justify-content: space-between; gap: 12px; height: 37px; padding: 0 18px; border-top: 1px solid rgba(230, 243, 210, .11); }
 .terminal-footer > span:first-child { display: flex; align-items: center; gap: 8px; }
 .status-dot { width: 6px; height: 6px; box-shadow: none; background: var(--terminal-muted); }
@@ -169,7 +174,7 @@ h1 em, h2 em { font-family: Georgia, serif; font-weight: 400; letter-spacing: -.
   .topbar { min-height: 70px; }.topbar-meta { gap: 0; }.github-link { display: none; }
   .hero { padding: 72px 0 55px; }.hero-copy { font-size: 14px; }.hero-actions { align-items: flex-start; flex-direction: column; gap: 21px; }
   .lab-grid, .info-section { grid-template-columns: 1fr; gap: 38px; }.terminal-body, .screen-container { min-height: 380px; }
-  .command-bar button { padding-inline: 8px; }.terminal-hint { display: none; }
+  .command-bar { grid-template-columns: 1fr; grid-template-areas: "entry" "actions" "hint"; gap: 7px; }.command-actions { display: grid; grid-template-columns: 1.2fr 1fr 1fr; }.command-actions button { padding-inline: 8px; }.terminal-hint { display: none; }
   .lab-sidebar { border-top: 0; }.side-intro { padding-top: 0; }.sidebar-actions { margin-top: 0; }
   .info-section { padding: 92px 0; gap: 32px; }.flow-row { align-items: flex-start; flex-wrap: wrap; white-space: normal; row-gap: 12px; }
   .footer { flex-direction: column; gap: 10px; }

@@ -3,6 +3,7 @@
 
   const LOCAL = "./assets";
   const REMOTE = "https://copy.sh/v86";
+  const NETWORK_RELAY = "wss://relay.widgetry.org/";
 
   const el = (id) => document.getElementById(id);
   const boot = el("terminal-boot");
@@ -36,6 +37,9 @@
   let serialEscapeBuffer = "";
   let serialRenderScheduled = false;
   let toastTimer = null;
+  let commandHistory = [];
+  let commandHistoryIndex = -1;
+  let networkSetupStarted = false;
 
   function showToast(message) {
     toast.textContent = message;
@@ -133,8 +137,9 @@
     window.clearTimeout(readyTimer);
     setProgress(100, "terminal hazır — hoş geldiniz");
     boot.classList.add("is-hidden");
-    setRuntimeState("çalışıyor", "Alpine aktif");
+    setRuntimeState("çalışıyor", "Alpine aktif · ağ hazırlanıyor");
     setRunningState(true);
+    startNetworkSetup();
   }
 
   async function loadRuntimeMeta() {
@@ -208,7 +213,11 @@
         basefs: filesystemIndex,
       },
       bzimage_initrd_from_filesystem: false,
-      cmdline: "rw root=host9p rootfstype=9p rootflags=trans=virtio,version=9p2000.L,cache=loose modules=virtio_pci,9p,9pnet_virtio console=ttyS0,115200n8 init=/bin/sh tsc=reliable",
+      net_device: {
+        type: "virtio",
+        relay_url: NETWORK_RELAY,
+      },
+      cmdline: "rw root=host9p rootfstype=9p rootflags=trans=virtio,version=9p2000.L,cache=loose modules=virtio_pci,virtio_net,9p,9pnet_virtio console=ttyS0,115200n8 init=/bin/sh tsc=reliable",
       autostart: true,
     });
 
@@ -257,6 +266,8 @@
     serialOutput = "";
     updateOutputActions();
     serialEscapeBuffer = "";
+    networkSetupStarted = false;
+    commandHistoryIndex = -1;
     serialConsole.value = "";
     window.clearTimeout(readyTimer);
     emptyState.hidden = true;
@@ -296,6 +307,8 @@
     serialOutput = "";
     updateOutputActions();
     serialEscapeBuffer = "";
+    networkSetupStarted = false;
+    commandHistoryIndex = -1;
     serialConsole.value = "";
     commandInput.value = "";
     setRunningState(false);
@@ -320,7 +333,19 @@
       return;
     }
     sendSerialInput(`${normalizedCommand}\n`);
+    if (commandHistory[commandHistory.length - 1] !== normalizedCommand) commandHistory.push(normalizedCommand);
+    commandHistory = commandHistory.slice(-50);
+    commandHistoryIndex = -1;
     commandInput.value = "";
+  }
+
+  function startNetworkSetup() {
+    if (networkSetupStarted) return;
+    networkSetupStarted = true;
+    window.setTimeout(() => {
+      sendSerialInput("ifup eth0\n");
+      window.setTimeout(() => setRuntimeState("çalışıyor", "Alpine aktif · DHCP denendi"), 1400);
+    }, 250);
   }
 
   function sendSerialInput(value) {
@@ -412,6 +437,23 @@
     event.preventDefault();
     sendCommand(commandInput.value);
     commandInput.focus();
+  });
+
+  commandInput.addEventListener("keydown", (event) => {
+    if (event.key === "ArrowUp" && commandHistory.length) {
+      event.preventDefault();
+      commandHistoryIndex = Math.min(commandHistoryIndex + 1, commandHistory.length - 1);
+      commandInput.value = commandHistory[commandHistory.length - 1 - commandHistoryIndex];
+      commandInput.setSelectionRange(commandInput.value.length, commandInput.value.length);
+    } else if (event.key === "ArrowDown" && commandHistoryIndex >= 0) {
+      event.preventDefault();
+      commandHistoryIndex -= 1;
+      commandInput.value = commandHistoryIndex < 0 ? "" : commandHistory[commandHistory.length - 1 - commandHistoryIndex];
+      commandInput.setSelectionRange(commandInput.value.length, commandInput.value.length);
+    } else if (event.key === "Escape") {
+      commandInput.value = "";
+      commandHistoryIndex = -1;
+    }
   });
 
   // Sayfa açıldığında terminali otomatik olarak yükle; kullanıcı düşük hareket
