@@ -30,6 +30,7 @@
   let serialBuffer = "";
   let serialOutput = "";
   let serialEscapeBuffer = "";
+  let serialRenderScheduled = false;
   let toastTimer = null;
 
   function showToast(message) {
@@ -59,8 +60,13 @@
   }
 
   function renderSerialOutput() {
-    serialConsole.value = serialOutput;
-    serialConsole.scrollTop = serialConsole.scrollHeight;
+    if (serialRenderScheduled) return;
+    serialRenderScheduled = true;
+    window.requestAnimationFrame(() => {
+      serialConsole.value = serialOutput;
+      serialConsole.scrollTop = serialConsole.scrollHeight;
+      serialRenderScheduled = false;
+    });
   }
 
   function appendSerialCharacter(character) {
