@@ -34,6 +34,10 @@ jobs:
 
           mkdir -p dist/assets
           cp index.html styles.css app.js dist/
+          # Make each Pages deploy load the matching frontend bundle instead
+          # of keeping an older app.js/styles.css in the browser cache.
+          sed -i "s|href=\"./styles.css\"|href=\"./styles.css?v=${GITHUB_SHA}\"|" dist/index.html
+          sed -i "s|src=\"./app.js\"|src=\"./app.js?v=${GITHUB_SHA}\"|" dist/index.html
 
           V86_BASE="https://copy.sh/v86"
           # Build a bootable i386 Alpine rootfs for v86 instead of using the
