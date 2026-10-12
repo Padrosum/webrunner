@@ -15,7 +15,14 @@ RUN sed -i 's/getty 38400 tty1/agetty --autologin root tty1 linux/' /etc/inittab
  && printf '%s\n' 'ttyS0::respawn:/sbin/agetty --autologin root ttyS0 vt100' >> /etc/inittab \
  && echo 'root:' | chpasswd \
  && echo 'localhost' > /etc/hostname \
- && setup-hostname localhost
+ && setup-hostname localhost \
+ && printf '%s\n' \
+      '#!/bin/sh' \
+      'export TERM=vt100' \
+      'export PS1="(webrunner):\\w# "' \
+      'exec /bin/ash -i' \
+    > /sbin/webrunner-init \
+ && chmod +x /sbin/webrunner-init
 
 RUN printf '%s\n' \
       'rmmod ne2k-pci && modprobe ne2k-pci' \
