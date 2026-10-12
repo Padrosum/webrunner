@@ -18,6 +18,7 @@
   const commandForm = el("command-form");
   const commandInput = el("command-input");
   const commandSubmit = el("command-submit");
+  const ctrlZButton = el("ctrl-z-button");
   const serialConsole = el("serial-console");
   const bootVersion = el("boot-version");
   const runtimeVersion = el("runtime-version");
@@ -56,6 +57,7 @@
     stopButton.disabled = !running;
     commandInput.disabled = !running;
     commandSubmit.disabled = !running;
+    ctrlZButton.disabled = !running;
     startButton.disabled = running || isStarting;
   }
 
@@ -309,9 +311,24 @@
     commandInput.value = "";
   }
 
+  function sendCtrlZ() {
+    if (!emulator) {
+      showToast("Önce Alpine terminalini başlatın.");
+      return;
+    }
+    if (typeof emulator.serial0_send === "function") {
+      // ASCII SUB (0x1A) is the terminal control character for Ctrl+Z.
+      emulator.serial0_send("\u001a");
+    } else if (typeof emulator.keyboard_send_text === "function") {
+      emulator.keyboard_send_text("\u001a");
+    }
+    commandInput.focus();
+  }
+
   startButton.addEventListener("click", start);
   restartButton.addEventListener("click", restart);
   stopButton.addEventListener("click", stop);
+  ctrlZButton.addEventListener("click", sendCtrlZ);
   commandForm.addEventListener("submit", (event) => {
     event.preventDefault();
     sendCommand(commandInput.value);

@@ -129,6 +129,8 @@ h1 em, h2 em { font-family: Georgia, serif; font-weight: 400; letter-spacing: -.
 .command-bar button { padding: 8px 10px; border: 1px solid rgba(230, 243, 210, .16); background: transparent; color: var(--acid); cursor: pointer; font: 10px var(--mono); text-transform: uppercase; letter-spacing: .04em; }
 .command-bar button:hover:not(:disabled) { background: var(--acid); color: var(--ink); }
 .command-bar button:disabled { cursor: not-allowed; opacity: .35; }
+.command-bar .interrupt-button { color: #ff8a72; }
+.command-bar .interrupt-button:hover:not(:disabled) { background: #ff8a72; color: var(--ink); }
 .terminal-footer { height: 37px; padding: 0 18px; border-top: 1px solid rgba(230, 243, 210, .11); }
 .terminal-footer > span:first-child { display: flex; align-items: center; gap: 8px; }
 .status-dot { width: 6px; height: 6px; box-shadow: none; background: var(--terminal-muted); }
