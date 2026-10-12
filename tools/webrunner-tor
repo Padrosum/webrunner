@@ -1,0 +1,104 @@
+#!/bin/sh
+
+# WebRunner Tor helper.
+# The guest is ephemeral: these rules and the Tor data directory disappear
+# when the browser session is restarted.
+set -eu
+
+TORRC=/etc/tor/torrc
+PIDFILE=/run/tor/tor.pid
+
+ensure_dirs() {
+  mkdir -p /run/tor /var/log/tor /var/lib/tor
+  chown -R tor:tor /run/tor /var/log/tor /var/lib/tor
+}
+
+tor_pid() {
+  if [ -r "$PIDFILE" ]; then
+    cat "$PIDFILE"
+  fi
+}
+
+tor_running() {
+  pid="$(tor_pid 2>/dev/null || true)"
+  [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null
+}
+
+start_tor() {
+  ensure_dirs
+  if tor_running; then
+    echo "Tor zaten çalışıyor."
+    return 0
+  fi
+  tor --verify-config -f "$TORRC" >/dev/null
+  tor -f "$TORRC" --RunAsDaemon 1
+  echo "Tor başlatıldı; devre hazır olunca Tor çıkışı kullanılacak."
+}
+
+enable_transparent_mode() {
+  tor_uid="$(id -u tor)"
+
+  iptables -t nat -N WEBRUNNER_TOR 2>/dev/null || true
+  iptables -t nat -F WEBRUNNER_TOR
+  iptables -t nat -A WEBRUNNER_TOR -m owner --uid-owner "$tor_uid" -j RETURN
+  iptables -t nat -A WEBRUNNER_TOR -d 127.0.0.0/8 -j RETURN
+  iptables -t nat -A WEBRUNNER_TOR -p udp --dport 53 -j REDIRECT --to-ports 9053
+  iptables -t nat -A WEBRUNNER_TOR -p tcp --syn -j REDIRECT --to-ports 9040
+  iptables -t nat -C OUTPUT -j WEBRUNNER_TOR 2>/dev/null || iptables -t nat -A OUTPUT -j WEBRUNNER_TOR
+
+  # Tor can carry TCP and DNS, not raw UDP or ICMP. Reject the latter so they
+  # cannot silently bypass the privacy route.
+  iptables -C OUTPUT -p udp --sport 68 --dport 67 -j ACCEPT 2>/dev/null || \
+    iptables -I OUTPUT 1 -p udp --sport 68 --dport 67 -j ACCEPT
+  iptables -C OUTPUT -p udp ! --dport 53 -j REJECT 2>/dev/null || \
+    iptables -A OUTPUT -p udp ! --dport 53 -j REJECT
+  iptables -C OUTPUT -p icmp -j REJECT 2>/dev/null || \
+    iptables -A OUTPUT -p icmp -j REJECT
+
+  sysctl -w net.ipv6.conf.all.disable_ipv6=1 >/dev/null 2>&1 || true
+  echo "Tor şeffaf TCP/DNS yönlendirmesi etkin."
+}
+
+show_status() {
+  ip="$(ifconfig eth0 2>/dev/null | awk '/inet addr:/{sub("addr:", "", $2); print $2; exit}')"
+  tor_version="$(tor --version 2>/dev/null | sed -n 's/^Tor version //p' | tr ' ' '_')"
+  exit_ip=""
+  tor_state="starting"
+  route_state="inactive"
+
+  if tor_running; then
+    exit_ip="$(curl --silent --show-error --max-time 15 --socks5-hostname 127.0.0.1:9050 https://check.torproject.org/api/ip 2>/dev/null | sed -n 's/.*"IP":"\([^"]*\)".*/\1/p' || true)"
+    [ -n "$exit_ip" ] && tor_state="ready"
+  else
+    tor_state="stopped"
+  fi
+
+  if iptables -t nat -C OUTPUT -j WEBRUNNER_TOR 2>/dev/null; then
+    route_state="active"
+  fi
+
+  printf '__WEBRUNNER_NET__|%s|%s|%s|%s|%s\n' "${ip:-unknown}" "$tor_state" "${tor_version:-unknown}" "${exit_ip:-pending}" "$route_state"
+}
+
+case "${1:-start}" in
+  start)
+    start_tor
+    ;;
+  transparent)
+    enable_transparent_mode
+    ;;
+  status)
+    show_status
+    ;;
+  stop)
+    if tor_running; then
+      kill "$(tor_pid)"
+    fi
+    rm -f "$PIDFILE"
+    echo "Tor durduruldu."
+    ;;
+  *)
+    echo "Kullanım: webrunner-tor {start|transparent|status|stop}" >&2
+    exit 2
+    ;;
+esac

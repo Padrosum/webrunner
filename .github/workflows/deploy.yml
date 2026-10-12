@@ -33,6 +33,7 @@ jobs:
           set -euo pipefail
 
           mkdir -p dist/assets
+          mkdir -p dist/third-party .github/docker/alpine/holyp-src
           cp index.html styles.css app.js dist/
           # Make each Pages deploy load the matching frontend bundle instead
           # of keeping an older app.js/styles.css in the browser cache.
@@ -43,6 +44,14 @@ jobs:
           # Build a bootable i386 Alpine rootfs for v86 instead of using the
           # installer-only netboot initramfs.
           git clone --depth 1 https://github.com/copy/v86.git "$RUNNER_TEMP/v86"
+          git clone --depth 1 https://github.com/Padrosum/holyp.git "$RUNNER_TEMP/holyp"
+          HOLYP_COMMIT=$(git -C "$RUNNER_TEMP/holyp" rev-parse HEAD)
+          git -C "$RUNNER_TEMP/holyp" archive --format=tar --output=- HEAD \
+            | tar -x -C .github/docker/alpine/holyp-src
+          git -C "$RUNNER_TEMP/holyp" archive \
+            --format=tar.gz --output=dist/third-party/holyp-source.tar.gz HEAD
+          printf '%s\n' "$HOLYP_COMMIT" > dist/third-party/holyp-commit.txt
+          cp tools/THIRD_PARTY_NOTICES.md dist/third-party/README.md
           docker build --pull --platform linux/386 \
             --file .github/docker/alpine/Dockerfile \
             --tag webrunner-alpine:latest .
@@ -63,7 +72,12 @@ jobs:
           tar -xOf "$RUNNER_TEMP/alpine-rootfs.tar" boot/vmlinuz-virt > dist/assets/vmlinuz-virt
           tar -xOf "$RUNNER_TEMP/alpine-rootfs.tar" boot/initramfs-virt > dist/assets/initramfs-virt
           ALPINE_VERSION=$(tar -xOf "$RUNNER_TEMP/alpine-rootfs.tar" etc/alpine-release | tr -d '\n')
-          printf '{"alpine_version":"%s"}\n' "$ALPINE_VERSION" > dist/runtime.json
+          TOR_VERSION=$(tar -xOf "$RUNNER_TEMP/alpine-rootfs.tar" etc/webrunner-versions \
+            | sed -n 's/^tor=//p' | tr -d '\n')
+          HOLYP_VERSION=$(tar -xOf "$RUNNER_TEMP/alpine-rootfs.tar" etc/webrunner-versions \
+            | sed -n 's/^holyp=//p' | tr -d '\n')
+          printf '{"alpine_version":"%s","tor_version":"%s","holyp_version":"%s","holyp_commit":"%s"}\n' \
+            "$ALPINE_VERSION" "$TOR_VERSION" "$HOLYP_VERSION" "$HOLYP_COMMIT" > dist/runtime.json
 
           curl --fail --location --retry 4 --retry-all-errors --silent --show-error \
             "$V86_BASE/build/libv86.js" -o dist/assets/libv86.js

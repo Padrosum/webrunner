@@ -155,6 +155,18 @@ h1 em, h2 em { font-family: Georgia, serif; font-weight: 400; letter-spacing: -.
 .spec-list { display: grid; gap: 11px; margin: 15px 0 0; }
 .spec-list div { display: flex; justify-content: space-between; gap: 10px; font: 11px var(--mono); }
 .spec-list dt { color: var(--muted); }.spec-list dd { margin: 0; color: var(--ink); }
+.network-block { padding-bottom: 19px; }
+.network-state-line { display: flex; align-items: center; gap: 8px; margin-top: 15px; color: var(--ink); font: 11px var(--mono); text-transform: uppercase; letter-spacing: .04em; }
+.network-dot { width: 7px; height: 7px; display: inline-block; border-radius: 50%; background: var(--muted); box-shadow: 0 0 0 3px rgba(123, 128, 123, .14); }
+.network-dot.is-warning { background: var(--warning); box-shadow: 0 0 0 3px rgba(239, 198, 79, .15); }
+.network-dot.is-live { background: var(--success); box-shadow: 0 0 0 3px rgba(155, 210, 61, .15); }
+.network-list { display: grid; gap: 9px; margin: 13px 0 0; }
+.network-list div { display: flex; justify-content: space-between; gap: 10px; font: 10px var(--mono); }
+.network-list dt { color: var(--muted); }.network-list dd { max-width: 62%; margin: 0; overflow: hidden; color: var(--ink); text-align: right; text-overflow: ellipsis; white-space: nowrap; }
+.network-refresh { width: 100%; margin-top: 15px; padding: 9px 10px; border: 1px solid var(--line); background: transparent; color: var(--ink); cursor: pointer; font: 10px var(--mono); text-transform: uppercase; letter-spacing: .04em; }
+.network-refresh:hover:not(:disabled) { border-color: var(--ink); background: var(--ink); color: var(--acid); }
+.network-refresh:disabled { cursor: not-allowed; opacity: .38; }
+.network-note { margin-top: 12px !important; color: #8b908a !important; font: 10px/1.45 var(--mono) !important; }
 .sidebar-actions { display: flex; gap: 8px; padding-top: 20px; margin-top: auto; }
 .button-secondary, .button-quiet { padding: 11px 12px; font: 10px var(--mono); text-transform: uppercase; letter-spacing: .03em; }
 .button-secondary { background: var(--ink); color: var(--acid); }.button-quiet { background: transparent; color: var(--muted); border: 1px solid var(--line); }

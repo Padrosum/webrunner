@@ -26,6 +26,15 @@
   const downloadOutputButton = el("download-output");
   const bootVersion = el("boot-version");
   const runtimeVersion = el("runtime-version");
+  const runtimeTorVersion = el("runtime-tor-version");
+  const runtimeHolypVersion = el("runtime-holyp-version");
+  const networkRefreshButton = el("network-refresh");
+  const networkDot = el("network-dot");
+  const networkState = el("network-state");
+  const networkIp = el("network-ip");
+  const networkExitIp = el("network-exit-ip");
+  const networkTorVersion = el("network-tor-version");
+  const networkRoute = el("network-route");
   const toast = el("toast");
 
   let emulator = null;
@@ -40,6 +49,7 @@
   let commandHistory = [];
   let commandHistoryIndex = -1;
   let networkSetupStarted = false;
+  let networkStatusTimer = null;
 
   function showToast(message) {
     toast.textContent = message;
@@ -58,6 +68,28 @@
     runtimeLabel.textContent = message;
   }
 
+  function resetNetworkStatus() {
+    networkDot.classList.remove("is-live", "is-warning");
+    networkState.textContent = "bekliyor";
+    networkIp.textContent = "—";
+    networkExitIp.textContent = "—";
+    networkTorVersion.textContent = runtimeTorVersion.textContent || "—";
+    networkRoute.textContent = "—";
+  }
+
+  function applyNetworkStatus(ip, torState, torVersion, exitIp, routeState) {
+    const isReady = torState === "ready" && routeState === "active";
+    const isStarting = torState === "starting";
+    networkDot.classList.toggle("is-live", isReady);
+    networkDot.classList.toggle("is-warning", isStarting);
+    networkState.textContent = isReady ? "Tor + rota etkin" : isStarting ? "Tor bağlanıyor" : torState === "ready" ? "Tor etkin · rota bekliyor" : "Tor kapalı";
+    networkIp.textContent = ip || "bilinmiyor";
+    networkExitIp.textContent = exitIp && exitIp !== "pending" ? exitIp : "bekliyor";
+    networkTorVersion.textContent = torVersion || runtimeTorVersion.textContent || "bilinmiyor";
+    networkRoute.textContent = routeState === "active" ? "şeffaf TCP/DNS" : "etkin değil";
+    if (isReady) setRuntimeState("çalışıyor", "Alpine aktif · Tor yönlendirmesi etkin");
+  }
+
   function setRunningState(running) {
     statusDot.classList.toggle("is-live", running);
     restartButton.disabled = !running;
@@ -66,6 +98,7 @@
     commandSubmit.disabled = !running;
     ctrlCButton.disabled = !running;
     ctrlZButton.disabled = !running;
+    networkRefreshButton.disabled = !running;
     startButton.disabled = running || isStarting;
   }
 
@@ -87,6 +120,18 @@
 
   function appendSerialCharacter(character) {
     serialOutput = `${serialOutput}${character}`.slice(-24000);
+    updateOutputActions();
+    renderSerialOutput();
+    consumeNetworkMarker();
+  }
+
+  function consumeNetworkMarker() {
+    const match = serialOutput.match(/__WEBRUNNER_NET__\|([^\r\n]*)/);
+    if (!match) return;
+    const [ip, torState, torVersion, exitIp, routeState] = match[1].split("|");
+    applyNetworkStatus(ip, torState, torVersion, exitIp, routeState);
+    serialOutput = serialOutput.replace(match[0], "");
+    serialBuffer = serialBuffer.replace(match[0], "");
     updateOutputActions();
     renderSerialOutput();
   }
@@ -137,8 +182,9 @@
     window.clearTimeout(readyTimer);
     setProgress(100, "terminal hazır — hoş geldiniz");
     boot.classList.add("is-hidden");
-    setRuntimeState("çalışıyor", "Alpine aktif · ağ hazırlanıyor");
+    setRuntimeState("çalışıyor", "Alpine aktif · Tor hazırlanıyor");
     setRunningState(true);
+    resetNetworkStatus();
     startNetworkSetup();
   }
 
@@ -150,6 +196,9 @@
       const label = meta.alpine_version || "stable";
       bootVersion.textContent = label;
       runtimeVersion.textContent = `Alpine ${label}`;
+      runtimeTorVersion.textContent = meta.tor_version ? `Tor ${meta.tor_version}` : "Tor paketleniyor";
+      runtimeHolypVersion.textContent = meta.holyp_version ? `HolyP ${meta.holyp_version}` : "HolyP paketleniyor";
+      if (!shellReady) networkTorVersion.textContent = runtimeTorVersion.textContent;
     } catch (_) {
       // Local source preview may not have the generated runtime metadata yet.
     }
@@ -217,7 +266,7 @@
         type: "virtio",
         relay_url: NETWORK_RELAY,
       },
-      cmdline: "rw root=host9p rootfstype=9p rootflags=trans=virtio,version=9p2000.L,cache=loose modules=virtio_pci,virtio_net,9p,9pnet_virtio console=ttyS0,115200n8 init=/bin/sh tsc=reliable",
+      cmdline: "rw root=host9p rootfstype=9p rootflags=trans=virtio,version=9p2000.L,cache=loose modules=virtio_pci,virtio_net,9p,9pnet_virtio console=ttyS0,115200n8 init=/bin/sh tsc=reliable ipv6.disable=1",
       autostart: true,
     });
 
@@ -267,8 +316,10 @@
     updateOutputActions();
     serialEscapeBuffer = "";
     networkSetupStarted = false;
+    window.clearTimeout(networkStatusTimer);
     commandHistoryIndex = -1;
     serialConsole.value = "";
+    resetNetworkStatus();
     window.clearTimeout(readyTimer);
     emptyState.hidden = true;
     boot.classList.remove("is-hidden");
@@ -308,9 +359,11 @@
     updateOutputActions();
     serialEscapeBuffer = "";
     networkSetupStarted = false;
+    window.clearTimeout(networkStatusTimer);
     commandHistoryIndex = -1;
     serialConsole.value = "";
     commandInput.value = "";
+    resetNetworkStatus();
     setRunningState(false);
     setProgress(25, "Alpine yeniden başlatılıyor...");
     boot.classList.remove("is-hidden");
@@ -342,10 +395,17 @@
   function startNetworkSetup() {
     if (networkSetupStarted) return;
     networkSetupStarted = true;
+    networkDot.classList.add("is-warning");
+    networkState.textContent = "Tor başlıyor";
     window.setTimeout(() => {
-      sendSerialInput("ifconfig eth0 up && udhcpc -i eth0\n");
-      window.setTimeout(() => setRuntimeState("çalışıyor", "Alpine aktif · DHCP denendi"), 1400);
+      sendSerialInput("ifconfig eth0 up && udhcpc -i eth0 && webrunner-tor start && webrunner-tor transparent\n");
+      window.setTimeout(requestNetworkStatus, 7000);
     }, 250);
+  }
+
+  function requestNetworkStatus() {
+    if (!shellReady) return;
+    sendSerialInput("webrunner-tor status\n");
   }
 
   function sendSerialInput(value) {
@@ -430,6 +490,7 @@
   stopButton.addEventListener("click", stop);
   ctrlCButton.addEventListener("click", sendCtrlC);
   ctrlZButton.addEventListener("click", sendCtrlZ);
+  networkRefreshButton.addEventListener("click", requestNetworkStatus);
   serialConsole.addEventListener("keydown", sendTerminalKey);
   copyOutputButton.addEventListener("click", copyOutput);
   downloadOutputButton.addEventListener("click", downloadOutput);

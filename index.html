@@ -28,7 +28,7 @@
         </a>
         <div class="topbar-meta">
           <span class="live-dot"><i></i> tarayıcı içi runtime</span>
-          <a class="github-link" href="https://github.com/" target="_blank" rel="noreferrer">
+          <a class="github-link" href="https://github.com/Padrosum/webrunner/actions" target="_blank" rel="noreferrer">
             GitHub Actions <span aria-hidden="true">↗</span>
           </a>
         </div>
@@ -117,7 +117,7 @@
             <div class="side-block side-intro">
               <div class="section-label">çalışma alanı</div>
               <h2>Komut satırında<br /><span>özgürce dolaşın.</span></h2>
-              <p>Terminal açıldığında doğrudan Alpine kabuğundasınız. Denemeleriniz bu oturumla sınırlıdır.</p>
+              <p>Terminal açıldığında Alpine kabuğundasınız. Ağ trafiği Tor üzerinden yönlendirilir; bu, tek başına anonimlik garantisi değildir.</p>
             </div>
 
             <div class="side-block specs-block">
@@ -128,7 +128,22 @@
                 <div><dt>bellek</dt><dd>512 MB</dd></div>
                 <div><dt>altyapı</dt><dd>v86 + WASM</dd></div>
                 <div><dt>ağ</dt><dd>virtio + DHCP</dd></div>
+                <div><dt>tor</dt><dd id="runtime-tor-version">yükleniyor</dd></div>
+                <div><dt>holyp</dt><dd id="runtime-holyp-version">yükleniyor</dd></div>
               </dl>
+            </div>
+
+            <div class="side-block network-block" aria-live="polite">
+              <div class="section-label">gizlilik ağı</div>
+              <div class="network-state-line"><i class="network-dot" id="network-dot"></i><strong id="network-state">bekliyor</strong></div>
+              <dl class="network-list">
+                <div><dt>Alpine IP</dt><dd id="network-ip">—</dd></div>
+                <div><dt>Tor çıkışı</dt><dd id="network-exit-ip">—</dd></div>
+                <div><dt>Tor sürümü</dt><dd id="network-tor-version">—</dd></div>
+                <div><dt>rota</dt><dd id="network-route">—</dd></div>
+              </dl>
+              <button class="network-refresh" id="network-refresh" type="button" disabled>↻ ağı sorgula</button>
+              <p class="network-note">Tor çıkış IP’si, bu oturumun dışarıdan görünen adresidir. Tarayıcı relay bağlantısı Tor’a dahil değildir.</p>
             </div>
 
             <div class="sidebar-actions">
@@ -160,7 +175,7 @@
 
       <footer class="footer">
         <span>WebRunner <span class="footer-muted">/ tarayıcıda deneysel Linux</span></span>
-        <span>Alpine Linux + <a href="https://github.com/copy/v86" target="_blank" rel="noreferrer">v86</a></span>
+        <span>Alpine + <a href="https://github.com/copy/v86" target="_blank" rel="noreferrer">v86</a> · <a href="https://github.com/Padrosum/TorforTerminal" target="_blank" rel="noreferrer">tft</a> · <a href="https://github.com/Padrosum/holyp" target="_blank" rel="noreferrer">holyp</a></span>
       </footer>
     </div>
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
