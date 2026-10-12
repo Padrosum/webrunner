@@ -8,8 +8,7 @@ RUN apk add --no-cache \
       alpine-conf \
       agetty \
       linux-${KERNEL} \
-      linux-firmware-none \
-      nodejs
+      linux-firmware-none
 
 # Start an autologin shell on both the emulated VGA terminal and serial port.
 RUN sed -i 's/getty 38400 tty1/agetty --autologin root tty1 linux/' /etc/inittab \
@@ -23,9 +22,8 @@ RUN printf '%s\n' \
       'rmmod virtio-net && modprobe virtio-net' \
       'hwclock -s' \
       'setup-interfaces -a -r' \
-    > /root/networking.sh \
- && chmod +x /root/networking.sh \
- && printf '%s\n' 'console.log("Hello from WebRunner Alpine");' > /root/hello.js
+ > /root/networking.sh \
+ && chmod +x /root/networking.sh
 
 RUN for service in devfs dmesg mdev hwdrivers; do rc-update add "$service" sysinit; done \
  && for service in hwclock modules sysctl hostname syslog bootmisc; do rc-update add "$service" boot; done \
