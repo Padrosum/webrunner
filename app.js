@@ -133,12 +133,13 @@
       vga_bios: { url: vgaBios },
       bzimage: { url: kernel, async: false },
       initrd: { url: initrd, async: false },
+      serial_container: serialConsole,
       filesystem: {
         baseurl: `${LOCAL}/alpine-rootfs-flat`,
         basefs: filesystemIndex,
       },
       bzimage_initrd_from_filesystem: false,
-      cmdline: "rw root=host9p rootfstype=9p rootflags=trans=virtio,cache=loose modules=virtio_pci,9p,9pnet_virtio tsc=reliable",
+      cmdline: "rw root=host9p rootfstype=9p rootflags=trans=virtio,cache=loose modules=virtio_pci,9p,9pnet_virtio console=tty0 console=ttyS0,115200n8 tsc=reliable",
       autostart: true,
     });
 
@@ -150,7 +151,7 @@
     emulator.add_listener("serial0-output-byte", (byte) => {
       const character = String.fromCharCode(byte);
       serialOutput = `${serialOutput}${character}`.slice(-24000);
-      serialConsole.textContent = serialOutput;
+      serialConsole.value = serialOutput;
       serialConsole.scrollTop = serialConsole.scrollHeight;
       serialBuffer = `${serialBuffer}${character}`.slice(-512);
       if (/(?:~#|localhost:~#|login:)/.test(serialBuffer)) markShellReady();
@@ -188,7 +189,7 @@
     shellReady = false;
     serialBuffer = "";
     serialOutput = "";
-    serialConsole.textContent = "";
+    serialConsole.value = "";
     window.clearTimeout(readyTimer);
     emptyState.hidden = true;
     boot.classList.remove("is-hidden");
@@ -225,7 +226,7 @@
     shellReady = false;
     serialBuffer = "";
     serialOutput = "";
-    serialConsole.textContent = "";
+    serialConsole.value = "";
     commandInput.value = "";
     setRunningState(false);
     setProgress(25, "Alpine yeniden başlatılıyor...");
