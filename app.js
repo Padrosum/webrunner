@@ -343,7 +343,7 @@
     if (networkSetupStarted) return;
     networkSetupStarted = true;
     window.setTimeout(() => {
-      sendSerialInput("ifup eth0\n");
+      sendSerialInput("udhcpc -i eth0\n");
       window.setTimeout(() => setRuntimeState("çalışıyor", "Alpine aktif · DHCP denendi"), 1400);
     }, 250);
   }

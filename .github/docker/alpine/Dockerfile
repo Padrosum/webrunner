@@ -23,7 +23,7 @@ RUN echo 'root:' | chpasswd \
 RUN printf '%s\n' \
       'modprobe virtio_net 2>/dev/null || true' \
       'hwclock -s' \
-      'ifup eth0' \
+      'udhcpc -i eth0' \
  > /root/networking.sh \
  && chmod +x /root/networking.sh
 
