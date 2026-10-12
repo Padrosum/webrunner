@@ -3,7 +3,9 @@ FROM i386/alpine:latest
 ENV KERNEL=virt
 
 RUN apk add --no-cache \
+      openrc \
       alpine-base \
+      alpine-conf \
       agetty \
       linux-${KERNEL} \
       linux-firmware-none \

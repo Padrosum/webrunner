@@ -192,7 +192,7 @@
         basefs: filesystemIndex,
       },
       bzimage_initrd_from_filesystem: false,
-      cmdline: "rw root=host9p rootfstype=9p rootflags=trans=virtio,cache=loose modules=virtio_pci,9p,9pnet_virtio console=tty0 tsc=reliable",
+      cmdline: "rw root=host9p rootfstype=9p rootflags=trans=virtio,version=9p2000.L,cache=loose modules=virtio_pci,9p,9pnet_virtio console=tty0 tsc=reliable",
       autostart: true,
     });
 
