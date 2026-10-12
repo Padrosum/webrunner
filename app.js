@@ -192,7 +192,7 @@
         basefs: filesystemIndex,
       },
       bzimage_initrd_from_filesystem: false,
-      cmdline: "rw root=host9p rootfstype=9p rootflags=trans=virtio,version=9p2000.L,cache=loose modules=virtio_pci,9p,9pnet_virtio console=ttyS0,115200n8 init=/sbin/webrunner-init tsc=reliable",
+      cmdline: "rw root=host9p rootfstype=9p rootflags=trans=virtio,version=9p2000.L,cache=loose modules=virtio_pci,9p,9pnet_virtio console=ttyS0,115200n8 init=/bin/sh tsc=reliable",
       autostart: true,
     });
 
@@ -204,7 +204,7 @@
     emulator.add_listener("serial0-output-byte", (byte) => {
       const character = String.fromCharCode(byte);
       handleSerialCharacter(character);
-      if (/(?:~#|localhost:~#|login:)/.test(serialBuffer)) markShellReady();
+      if (/(?:~#|localhost:~#|webrunner.*#|(?:^|\n)# )/.test(serialBuffer)) markShellReady();
     });
 
     emulator.add_listener("cpu-event-halt", () => {
