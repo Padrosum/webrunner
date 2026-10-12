@@ -4,6 +4,7 @@
   const LOCAL = "./assets";
   const REMOTE = "https://copy.sh/v86";
   const NETWORK_RELAY = "wss://relay.widgetry.org/";
+  const BUILD_ID = "__BUILD_ID__";
 
   const el = (id) => document.getElementById(id);
   const boot = el("terminal-boot");
@@ -220,9 +221,11 @@
   }
 
   async function assetUrl(localName, remoteUrl) {
+    const localPath = `${LOCAL}/${localName}`;
+    const versionedLocalPath = BUILD_ID === "__BUILD_ID__" ? localPath : `${localPath}?v=${BUILD_ID}`;
     try {
-      const response = await fetch(`${LOCAL}/${localName}`, { method: "HEAD", cache: "no-store" });
-      if (response.ok) return `${LOCAL}/${localName}`;
+      const response = await fetch(versionedLocalPath, { method: "HEAD", cache: "no-store" });
+      if (response.ok) return versionedLocalPath;
     } catch (_) {
       // file:// ile açılan yerel önizlemelerde HEAD çalışmayabilir; uzak yola geçilir.
     }

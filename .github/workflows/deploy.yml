@@ -39,6 +39,7 @@ jobs:
           # of keeping an older app.js/styles.css in the browser cache.
           sed -i "s|href=\"./styles.css\"|href=\"./styles.css?v=${GITHUB_SHA}\"|" dist/index.html
           sed -i "s|src=\"./app.js\"|src=\"./app.js?v=${GITHUB_SHA}\"|" dist/index.html
+          sed -i "s|__BUILD_ID__|${GITHUB_SHA}|g" dist/app.js
 
           V86_BASE="https://copy.sh/v86"
           # Build a bootable i386 Alpine rootfs for v86 instead of using the
@@ -55,9 +56,14 @@ jobs:
           docker build --pull --platform linux/386 \
             --file .github/docker/alpine/Dockerfile \
             --tag webrunner-alpine:latest .
+          docker run --rm --platform linux/386 webrunner-alpine:latest \
+            /bin/sh -c 'test -x /usr/bin/webrunner-tty && test -x /usr/bin/webrunner-tor'
           alpine_container=$(docker create --platform linux/386 webrunner-alpine:latest)
           docker export "$alpine_container" --output "$RUNNER_TEMP/alpine-rootfs.tar"
           docker rm "$alpine_container"
+
+          tar -tf "$RUNNER_TEMP/alpine-rootfs.tar" | grep -qx 'usr/bin/webrunner-tty'
+          tar -tf "$RUNNER_TEMP/alpine-rootfs.tar" | grep -qx 'usr/bin/webrunner-tor'
 
           mkdir -p dist/assets/alpine-rootfs-flat
           python3 "$RUNNER_TEMP/v86/tools/fs2json.py" \
