@@ -8,5 +8,4 @@ VirtualAddrNetworkIPv4 10.192.0.0/10
 AutomapHostsOnResolve 1
 AvoidDiskWrites 1
 DataDirectory /var/lib/tor
-PidFile /run/tor/tor.pid
 Log notice file /var/log/tor/notices.log
