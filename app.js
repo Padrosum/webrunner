@@ -29,6 +29,7 @@
   let readyTimer = null;
   let serialBuffer = "";
   let serialOutput = "";
+  let serialEscapeBuffer = "";
   let toastTimer = null;
 
   function showToast(message) {
@@ -55,6 +56,53 @@
     commandInput.disabled = !running;
     commandSubmit.disabled = !running;
     startButton.disabled = running || isStarting;
+  }
+
+  function renderSerialOutput() {
+    serialConsole.value = serialOutput;
+    serialConsole.scrollTop = serialConsole.scrollHeight;
+  }
+
+  function appendSerialCharacter(character) {
+    serialOutput = `${serialOutput}${character}`.slice(-24000);
+    renderSerialOutput();
+  }
+
+  function handleSerialCharacter(character) {
+    serialBuffer = `${serialBuffer}${character}`.slice(-512);
+
+    if (serialEscapeBuffer) {
+      serialEscapeBuffer += character;
+
+      // ash/readline asks the terminal for the cursor position. Respond as
+      // a terminal would, but do not print the control sequence to the page.
+      if (serialEscapeBuffer === "\u001b[6n") {
+        if (typeof emulator?.serial0_send === "function") emulator.serial0_send("\u001b[1;1R");
+        serialEscapeBuffer = "";
+        return;
+      }
+
+      // Consume CSI escape sequences. A textarea cannot render them, while
+      // clear-screen commands should still clear the visible transcript.
+      if (serialEscapeBuffer.startsWith("\u001b[") && /[A-Za-z@`~]$/.test(serialEscapeBuffer)) {
+        if (/[JK]$/.test(serialEscapeBuffer)) serialOutput = "";
+        serialEscapeBuffer = "";
+        renderSerialOutput();
+        return;
+      }
+
+      if (serialEscapeBuffer.length >= 24) {
+        serialEscapeBuffer = "";
+      }
+      return;
+    }
+
+    if (character === "\u001b") {
+      serialEscapeBuffer = character;
+      return;
+    }
+
+    appendSerialCharacter(character);
   }
 
   function markShellReady() {
@@ -133,7 +181,6 @@
       vga_bios: { url: vgaBios },
       bzimage: { url: kernel, async: false },
       initrd: { url: initrd, async: false },
-      serial_container: serialConsole,
       filesystem: {
         baseurl: `${LOCAL}/alpine-rootfs-flat`,
         basefs: filesystemIndex,
@@ -150,10 +197,7 @@
 
     emulator.add_listener("serial0-output-byte", (byte) => {
       const character = String.fromCharCode(byte);
-      serialOutput = `${serialOutput}${character}`.slice(-24000);
-      serialConsole.value = serialOutput;
-      serialConsole.scrollTop = serialConsole.scrollHeight;
-      serialBuffer = `${serialBuffer}${character}`.slice(-512);
+      handleSerialCharacter(character);
       if (/(?:~#|localhost:~#|login:)/.test(serialBuffer)) markShellReady();
     });
 
@@ -189,6 +233,7 @@
     shellReady = false;
     serialBuffer = "";
     serialOutput = "";
+    serialEscapeBuffer = "";
     serialConsole.value = "";
     window.clearTimeout(readyTimer);
     emptyState.hidden = true;
@@ -226,6 +271,7 @@
     shellReady = false;
     serialBuffer = "";
     serialOutput = "";
+    serialEscapeBuffer = "";
     serialConsole.value = "";
     commandInput.value = "";
     setRunningState(false);

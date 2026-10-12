@@ -11,8 +11,9 @@ RUN apk add --no-cache \
 
 # Start an autologin shell on both the emulated VGA terminal and serial port.
 RUN sed -i 's/getty 38400 tty1/agetty --autologin root tty1 linux/' /etc/inittab \
- && printf '%s\n' 'ttyS0::respawn:/sbin/agetty --autologin root -s ttyS0 115200 vt100' >> /etc/inittab \
+ && printf '%s\n' 'ttyS0::respawn:/sbin/agetty --autologin root ttyS0 vt100' >> /etc/inittab \
  && echo 'root:' | chpasswd \
+ && echo 'localhost' > /etc/hostname \
  && setup-hostname localhost
 
 RUN printf '%s\n' \
