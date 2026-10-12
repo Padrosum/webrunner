@@ -5,9 +5,10 @@ Alpine Linux'u doğrudan tarayıcıda çalıştıran, statik bir GitHub Pages si
 ## Nasıl çalışır?
 
 - [v86](https://github.com/copy/v86), x86 bilgisayarını WebAssembly ile tarayıcıda emüle eder.
-- GitHub Actions, v86 runtime dosyalarını ve Alpine Linux'un `latest-stable` x86 netboot kernel/initramfs dosyalarını yayınlama öncesinde `dist/assets` altına indirir.
+- GitHub Actions, güncel i386 Alpine container'ından v86'nın 9p rootfs yapısını, kernel'ini ve initramfs'ını yayınlama öncesinde `dist/assets` altına üretir.
 - `main` dalına yapılan her push siteyi GitHub Pages'e deploy eder; zamanlanmış workflow her gün Alpine runtime'ını yeniler.
 - Terminal içindeki komut kutusu, Enter veya **gönder** düğmesiyle komutu doğrudan emülatöre yollar.
+- Alpine sürümü `i386/alpine:latest` taban imajından alınır; günlük workflow ile runtime yenilenir.
 
 ## Yayınlama
 
