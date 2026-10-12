@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/ioctl.h>
+#include <sys/stat.h>
 #include <unistd.h>
 
 static void fail(const char *message) {
@@ -14,6 +15,14 @@ static void fail(const char *message) {
 int main(void) {
   int tty = open("/dev/ttyS0", O_RDWR | O_NOCTTY);
   if (tty < 0) fail("tty açılamadı");
+
+  // The browser boot path intentionally skips OpenRC, so mdev may leave the
+  // standard entropy/null devices root-only. Tor drops to the tor user and
+  // needs these devices during daemon startup.
+  chmod("/dev/null", 0666);
+  chmod("/dev/zero", 0666);
+  chmod("/dev/random", 0666);
+  chmod("/dev/urandom", 0666);
 
   if (setsid() < 0 && errno != EPERM) fail("yeni oturum açılamadı");
   if (ioctl(tty, TIOCSCTTY, 1) < 0 && errno != EPERM) fail("kontrol terminali atanamadı");

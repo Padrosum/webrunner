@@ -51,6 +51,7 @@
   let commandHistoryIndex = -1;
   let networkSetupStarted = false;
   let networkStatusTimer = null;
+  let networkStatusAttempts = 0;
 
   function showToast(message) {
     toast.textContent = message;
@@ -88,7 +89,10 @@
     networkExitIp.textContent = exitIp && exitIp !== "pending" ? exitIp : "bekliyor";
     networkTorVersion.textContent = torVersion || runtimeTorVersion.textContent || "bilinmiyor";
     networkRoute.textContent = routeState === "active" ? "şeffaf TCP/DNS" : "etkin değil";
-    if (isReady) setRuntimeState("çalışıyor", "Alpine aktif · Tor yönlendirmesi etkin");
+    if (isReady) {
+      window.clearTimeout(networkStatusTimer);
+      setRuntimeState("çalışıyor", "Alpine aktif · Tor yönlendirmesi etkin");
+    }
   }
 
   function setRunningState(running) {
@@ -319,6 +323,7 @@
     updateOutputActions();
     serialEscapeBuffer = "";
     networkSetupStarted = false;
+    networkStatusAttempts = 0;
     window.clearTimeout(networkStatusTimer);
     commandHistoryIndex = -1;
     serialConsole.value = "";
@@ -398,17 +403,23 @@
   function startNetworkSetup() {
     if (networkSetupStarted) return;
     networkSetupStarted = true;
+    networkStatusAttempts = 0;
     networkDot.classList.add("is-warning");
     networkState.textContent = "Tor başlıyor";
     window.setTimeout(() => {
-      sendSerialInput("ifconfig eth0 up && udhcpc -i eth0 && /usr/bin/webrunner-tor start && /usr/bin/webrunner-tor transparent\n");
+      sendSerialInput("ifconfig lo up && ifconfig eth0 up && udhcpc -i eth0 && /usr/bin/webrunner-tor start && /usr/bin/webrunner-tor transparent\n");
       window.setTimeout(requestNetworkStatus, 7000);
     }, 250);
   }
 
   function requestNetworkStatus() {
     if (!shellReady) return;
+    networkStatusAttempts += 1;
     sendSerialInput("/usr/bin/webrunner-tor status\n");
+    window.clearTimeout(networkStatusTimer);
+    if (networkStatusAttempts < 12) {
+      networkStatusTimer = window.setTimeout(requestNetworkStatus, 22000);
+    }
   }
 
   function sendSerialInput(value) {
