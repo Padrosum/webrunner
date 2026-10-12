@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="tr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#101314" />
+    <meta
+      name="description"
+      content="Alpine Linux'u WebAssembly tabanlı x86 emülatörü ile tarayıcıda çalıştırın."
+    />
+    <title>WebRunner — Alpine Linux tarayıcıda</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Space+Grotesk:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="page-shell">
+      <header class="topbar">
+        <a class="brand" href="#top" aria-label="WebRunner ana sayfa">
+          <span class="brand-mark" aria-hidden="true">
+            <span></span><span></span><span></span><span></span>
+          </span>
+          <span>web<span class="brand-muted">/runner</span></span>
+        </a>
+        <div class="topbar-meta">
+          <span class="live-dot"><i></i> tarayıcı içi runtime</span>
+          <a class="github-link" href="https://github.com/" target="_blank" rel="noreferrer">
+            GitHub Actions <span aria-hidden="true">↗</span>
+          </a>
+        </div>
+      </header>
+
+      <main id="top">
+        <section class="hero">
+          <div class="eyebrow"><span class="eyebrow-line"></span> küçük. hızlı. meraklı.</div>
+          <h1>Alpine Linux.<br /><em>Tarayıcının içinde.</em></h1>
+          <p class="hero-copy">
+            Hafif Linux dağıtımını gerçek bir x86 emülatörüyle doğrudan web sayfasında
+            açın. Kurulum yok, sanal makine yok — sadece bir terminal ve biraz merak.
+          </p>
+          <div class="hero-actions">
+            <button class="button button-primary" id="hero-start" type="button">
+              <span class="button-icon">▶</span> terminali aç
+            </button>
+            <a class="text-link" href="#how-it-works">nasıl çalışıyor? <span>↓</span></a>
+          </div>
+        </section>
+
+        <section class="lab-grid" aria-label="Alpine Linux çalışma alanı">
+          <div class="terminal-card">
+            <div class="terminal-header">
+              <div class="window-controls" aria-hidden="true">
+                <i class="control-red"></i><i class="control-yellow"></i><i class="control-green"></i>
+              </div>
+              <div class="terminal-title"><span class="terminal-caret">›</span> alpine — ash</div>
+              <div class="terminal-state" id="terminal-state">hazır</div>
+            </div>
+            <div class="terminal-body" id="terminal-wrap">
+              <div class="terminal-boot" id="terminal-boot" aria-live="polite">
+                <div class="boot-ascii" aria-hidden="true">
+                  <span>      /\</span>
+                  <span>     /  \</span>
+                  <span>    / /\ \</span>
+                  <span>   / ____ \</span>
+                  <span>  /_/    \_\</span>
+                </div>
+                <div class="boot-title">Alpine Linux <span>3.24</span></div>
+                <div class="boot-message" id="boot-message">emülatör hazırlanıyor...</div>
+                <div class="boot-progress"><span id="boot-progress-bar"></span></div>
+              </div>
+              <div class="screen-container" id="screen_container" aria-label="Alpine Linux terminali">
+                <div class="screen-text" style="white-space: pre; font: 14px monospace; line-height: 14px"></div>
+                <canvas style="display: none"></canvas>
+              </div>
+              <div class="terminal-empty" id="terminal-empty" hidden>
+                <span class="empty-prompt">$</span>
+                <p>Başlat düğmesine basarak Alpine Linux’u açın.</p>
+              </div>
+            </div>
+            <div class="terminal-footer">
+              <span><i class="status-dot" id="status-dot"></i><span id="runtime-label">runtime bekliyor</span></span>
+              <span class="terminal-hint">klavye girişi için terminale tıklayın</span>
+            </div>
+          </div>
+
+          <aside class="lab-sidebar">
+            <div class="side-block side-intro">
+              <div class="section-label">çalışma alanı</div>
+              <h2>Komut satırında<br /><span>özgürce dolaşın.</span></h2>
+              <p>Terminal açıldığında doğrudan Alpine kabuğundasınız. Denemeleriniz bu oturumla sınırlıdır.</p>
+            </div>
+
+            <div class="side-block">
+              <div class="section-label">hızlı başlangıç</div>
+              <div class="command-list">
+                <button class="command-chip" type="button" data-command="cat /etc/alpine-release"><code>cat /etc/alpine-release</code><span>↗</span></button>
+                <button class="command-chip" type="button" data-command="apk update"><code>apk update</code><span>↗</span></button>
+                <button class="command-chip" type="button" data-command="ls -la"><code>ls -la</code><span>↗</span></button>
+                <button class="command-chip" type="button" data-command="neofetch"><code>neofetch</code><span>↗</span></button>
+              </div>
+            </div>
+
+            <div class="side-block specs-block">
+              <div class="section-label">runtime</div>
+              <dl class="spec-list">
+                <div><dt>sürüm</dt><dd>Alpine 3.24</dd></div>
+                <div><dt>mimari</dt><dd>x86 / 32-bit</dd></div>
+                <div><dt>bellek</dt><dd>512 MB</dd></div>
+                <div><dt>altyapı</dt><dd>v86 + WASM</dd></div>
+              </dl>
+            </div>
+
+            <div class="sidebar-actions">
+              <button class="button button-secondary" id="restart-button" type="button" disabled>↻ yeniden başlat</button>
+              <button class="button button-quiet" id="stop-button" type="button" disabled>■ durdur</button>
+            </div>
+          </aside>
+        </section>
+
+        <section class="info-section" id="how-it-works">
+          <div class="info-heading">
+            <div class="eyebrow"><span class="eyebrow-line"></span> arka planda</div>
+            <h2>Bir web sayfası,<br /><em>gerçek bir Linux.</em></h2>
+          </div>
+          <div class="info-copy">
+            <p>
+              WebRunner, x86 bilgisayarını JavaScript ve WebAssembly ile emüle eder.
+              Alpine çekirdeği ve initramfs GitHub Actions ile paketlenir; GitHub Pages
+              üzerinde yayınlanan bu statik sayfa da her şeyi tarayıcıda çalıştırır.
+            </p>
+            <div class="flow-row" aria-label="Çalışma akışı">
+              <span><b>01</b> çekirdeği yükle</span><i>→</i>
+              <span><b>02</b> emülatörü başlat</span><i>→</i>
+              <span><b>03</b> kabukta keşfet</span>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      <footer class="footer">
+        <span>WebRunner <span class="footer-muted">/ tarayıcıda deneysel Linux</span></span>
+        <span>Alpine Linux + <a href="https://github.com/copy/v86" target="_blank" rel="noreferrer">v86</a></span>
+      </footer>
+    </div>
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <script src="./app.js" defer></script>
+  </body>
+</html>

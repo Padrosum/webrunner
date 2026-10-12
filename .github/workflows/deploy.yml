@@ -1,0 +1,63 @@
+name: Deploy WebRunner
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build static site and fetch runtime assets
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          mkdir -p dist/assets
+          cp index.html styles.css app.js dist/
+
+          V86_BASE="https://copy.sh/v86"
+          ALPINE_BASE="https://dl-cdn.alpinelinux.org/alpine/v3.24/releases/x86/netboot"
+
+          curl --fail --location --retry 4 --retry-all-errors --silent --show-error \
+            "$V86_BASE/build/libv86.js" -o dist/assets/libv86.js
+          curl --fail --location --retry 4 --retry-all-errors --silent --show-error \
+            "$V86_BASE/build/v86.wasm" -o dist/assets/v86.wasm
+          curl --fail --location --retry 4 --retry-all-errors --silent --show-error \
+            "$V86_BASE/bios/seabios.bin" -o dist/assets/seabios.bin
+          curl --fail --location --retry 4 --retry-all-errors --silent --show-error \
+            "$V86_BASE/bios/vgabios.bin" -o dist/assets/vgabios.bin
+
+          # v86 currently supports 32-bit x86 kernels; Alpine's x86 netboot
+          # artifacts keep the runtime compatible with the browser emulator.
+          curl --fail --location --retry 4 --retry-all-errors --silent --show-error \
+            "$ALPINE_BASE/vmlinuz-lts" -o dist/assets/vmlinuz-lts
+          curl --fail --location --retry 4 --retry-all-errors --silent --show-error \
+            "$ALPINE_BASE/initramfs-lts" -o dist/assets/initramfs-lts
+
+          touch dist/.nojekyll
+
+      - name: Upload GitHub Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
