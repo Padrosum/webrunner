@@ -5,7 +5,7 @@ COPY .github/docker/alpine/holyp-src /tmp/holyp
 COPY tools/tty-sh.c /tmp/tty-sh.c
 WORKDIR /tmp/holyp
 RUN cargo build --release \
- && cc -O2 -static -s -o /tmp/webrunner-tty /tmp/tty-sh.c
+ && cc -O2 -fno-pie -no-pie -static -s -o /tmp/webrunner-tty /tmp/tty-sh.c
 
 FROM i386/alpine:latest
 
