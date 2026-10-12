@@ -407,7 +407,7 @@
     networkDot.classList.add("is-warning");
     networkState.textContent = "Tor başlıyor";
     window.setTimeout(() => {
-      sendSerialInput("ifconfig lo up && ifconfig eth0 up && udhcpc -i eth0 && /usr/bin/webrunner-tor start && /usr/bin/webrunner-tor transparent\n");
+      sendSerialInput("(ifconfig lo up && ifconfig eth0 up && udhcpc -i eth0 && /usr/bin/webrunner-tor start && /usr/bin/webrunner-tor transparent) </dev/null >/var/log/webrunner-network.log 2>&1 &\n");
       window.setTimeout(requestNetworkStatus, 7000);
     }, 250);
   }

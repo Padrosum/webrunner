@@ -8,9 +8,19 @@ set -eu
 TORRC=/etc/tor/torrc
 PIDFILE=/run/tor/tor.pid
 
+ensure_device_permissions() {
+  # The browser boot path does not run the full OpenRC/mdev sequence. On some
+  # boots mdev recreates these nodes as root:root 0660 after the init helper
+  # has already run, while Tor opens them after dropping privileges.
+  for device in /dev/null /dev/zero /dev/random /dev/urandom; do
+    [ -e "$device" ] && chmod 0666 "$device"
+  done
+}
+
 ensure_dirs() {
   mkdir -p /run/tor /var/log/tor /var/lib/tor
   chown -R tor:tor /run/tor /var/log/tor /var/lib/tor
+  ensure_device_permissions
 }
 
 tor_pid() {
