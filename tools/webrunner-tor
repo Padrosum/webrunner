@@ -42,13 +42,24 @@ start_tor() {
   fi
   tor --verify-config -f "$TORRC" >/dev/null
   rm -f "$PIDFILE"
+  touch "$PIDFILE"
+  chown tor:tor "$PIDFILE"
+  chmod 0644 "$PIDFILE"
   nohup tor -f "$TORRC" --RunAsDaemon 0 >/dev/null 2>&1 &
   tor_pid_started=$!
-  printf '%s\n' "$tor_pid_started" > "$PIDFILE"
-  sleep 1
+  for attempt in 1 2 3 4 5; do
+    sleep 1
+    [ -s "$PIDFILE" ] && break
+  done
   if ! kill -0 "$tor_pid_started" 2>/dev/null; then
     rm -f "$PIDFILE"
     echo "Tor başlatılamadı." >&2
+    return 1
+  fi
+  if [ ! -s "$PIDFILE" ]; then
+    kill "$tor_pid_started" 2>/dev/null || true
+    rm -f "$PIDFILE"
+    echo "Tor PID dosyasını oluşturamadı." >&2
     return 1
   fi
   echo "Tor başlatıldı; devre hazır olunca Tor çıkışı kullanılacak."
