@@ -18,8 +18,11 @@
   const commandForm = el("command-form");
   const commandInput = el("command-input");
   const commandSubmit = el("command-submit");
+  const ctrlCButton = el("ctrl-c-button");
   const ctrlZButton = el("ctrl-z-button");
   const serialConsole = el("serial-console");
+  const copyOutputButton = el("copy-output");
+  const downloadOutputButton = el("download-output");
   const bootVersion = el("boot-version");
   const runtimeVersion = el("runtime-version");
   const toast = el("toast");
@@ -57,8 +60,15 @@
     stopButton.disabled = !running;
     commandInput.disabled = !running;
     commandSubmit.disabled = !running;
+    ctrlCButton.disabled = !running;
     ctrlZButton.disabled = !running;
     startButton.disabled = running || isStarting;
+  }
+
+  function updateOutputActions() {
+    const hasOutput = Boolean(serialOutput);
+    copyOutputButton.disabled = !hasOutput;
+    downloadOutputButton.disabled = !hasOutput;
   }
 
   function renderSerialOutput() {
@@ -73,6 +83,7 @@
 
   function appendSerialCharacter(character) {
     serialOutput = `${serialOutput}${character}`.slice(-24000);
+    updateOutputActions();
     renderSerialOutput();
   }
 
@@ -93,7 +104,10 @@
       // Consume CSI escape sequences. A textarea cannot render them, while
       // clear-screen commands should still clear the visible transcript.
       if (serialEscapeBuffer.startsWith("\u001b[") && /[A-Za-z@`~]$/.test(serialEscapeBuffer)) {
-        if (/[JK]$/.test(serialEscapeBuffer)) serialOutput = "";
+        if (/[JK]$/.test(serialEscapeBuffer)) {
+          serialOutput = "";
+          updateOutputActions();
+        }
         serialEscapeBuffer = "";
         renderSerialOutput();
         return;
@@ -241,6 +255,7 @@
     shellReady = false;
     serialBuffer = "";
     serialOutput = "";
+    updateOutputActions();
     serialEscapeBuffer = "";
     serialConsole.value = "";
     window.clearTimeout(readyTimer);
@@ -279,6 +294,7 @@
     shellReady = false;
     serialBuffer = "";
     serialOutput = "";
+    updateOutputActions();
     serialEscapeBuffer = "";
     serialConsole.value = "";
     commandInput.value = "";
@@ -298,37 +314,100 @@
   function sendCommand(command) {
     const normalizedCommand = command.trim();
     if (!normalizedCommand) return;
-    if (!emulator) {
+    if (!emulator || !shellReady) {
       showToast(isStarting ? "Alpine açılıyor; terminal hazır olduğunda tekrar deneyin." : "Önce Alpine terminalini başlatın.");
       if (!isStarting) start();
       return;
     }
-    if (typeof emulator.serial0_send === "function") {
-      emulator.serial0_send(`${normalizedCommand}\n`);
-    } else if (typeof emulator.keyboard_send_text === "function") {
-      emulator.keyboard_send_text(`${normalizedCommand}\n`);
-    }
+    sendSerialInput(`${normalizedCommand}\n`);
     commandInput.value = "";
   }
 
-  function sendCtrlZ() {
-    if (!emulator) {
-      showToast("Önce Alpine terminalini başlatın.");
-      return;
-    }
+  function sendSerialInput(value) {
+    if (!emulator || !shellReady) return false;
     if (typeof emulator.serial0_send === "function") {
-      // ASCII SUB (0x1A) is the terminal control character for Ctrl+Z.
-      emulator.serial0_send("\u001a");
-    } else if (typeof emulator.keyboard_send_text === "function") {
-      emulator.keyboard_send_text("\u001a");
+      emulator.serial0_send(value);
+      return true;
     }
+    if (typeof emulator.keyboard_send_text === "function") {
+      emulator.keyboard_send_text(value);
+      return true;
+    }
+    return false;
+  }
+
+  function sendControlCharacter(character) {
+    if (!sendSerialInput(character)) showToast("Alpine terminali henüz hazır değil.");
     commandInput.focus();
+  }
+
+  function sendCtrlC() {
+    sendControlCharacter("\u0003");
+  }
+
+  function sendCtrlZ() {
+    sendControlCharacter("\u001a");
+  }
+
+  function sendTerminalKey(event) {
+    if (!shellReady) return;
+    const specialKeys = {
+      Enter: "\r",
+      Backspace: "\u007f",
+      Tab: "\t",
+      Escape: "\u001b",
+      ArrowUp: "\u001b[A",
+      ArrowDown: "\u001b[B",
+      ArrowRight: "\u001b[C",
+      ArrowLeft: "\u001b[D",
+      Home: "\u001b[H",
+      End: "\u001b[F",
+      Delete: "\u001b[3~",
+    };
+    let value = specialKeys[event.key] || "";
+    if (event.ctrlKey && !event.altKey && !event.metaKey) {
+      const controlKeys = { c: "\u0003", d: "\u0004", l: "\u000c", z: "\u001a" };
+      value = controlKeys[event.key.toLowerCase()] || value;
+    } else if (!event.ctrlKey && !event.altKey && !event.metaKey && event.key.length === 1) {
+      value = event.key;
+    }
+    if (!value) return;
+    event.preventDefault();
+    sendSerialInput(value);
+  }
+
+  async function copyOutput() {
+    if (!serialOutput) return;
+    try {
+      await navigator.clipboard.writeText(serialOutput);
+      showToast("Terminal çıktısı kopyalandı.");
+    } catch (_) {
+      serialConsole.focus();
+      serialConsole.select();
+      document.execCommand("copy");
+      showToast("Terminal çıktısı kopyalandı.");
+    }
+  }
+
+  function downloadOutput() {
+    if (!serialOutput) return;
+    const blob = new Blob([serialOutput], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "webrunner-terminal.txt";
+    link.click();
+    URL.revokeObjectURL(url);
   }
 
   startButton.addEventListener("click", start);
   restartButton.addEventListener("click", restart);
   stopButton.addEventListener("click", stop);
+  ctrlCButton.addEventListener("click", sendCtrlC);
   ctrlZButton.addEventListener("click", sendCtrlZ);
+  serialConsole.addEventListener("keydown", sendTerminalKey);
+  copyOutputButton.addEventListener("click", copyOutput);
+  downloadOutputButton.addEventListener("click", downloadOutput);
   commandForm.addEventListener("submit", (event) => {
     event.preventDefault();
     sendCommand(commandInput.value);

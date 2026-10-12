@@ -76,7 +76,7 @@
                 <div class="screen-text" style="white-space: pre; font: 14px monospace; line-height: 14px"></div>
                 <canvas style="display: none"></canvas>
               </div>
-              <textarea class="serial-console" id="serial-console" aria-label="Alpine serial terminali" readonly spellcheck="false"></textarea>
+              <textarea class="serial-console" id="serial-console" aria-label="Alpine serial terminali; yazmak için terminale tıklayın" readonly tabindex="0" spellcheck="false"></textarea>
               <div class="terminal-empty" id="terminal-empty" hidden>
                 <span class="empty-prompt">$</span>
                 <p>Başlat düğmesine basarak Alpine Linux’u açın.</p>
@@ -95,11 +95,16 @@
                 disabled
               />
               <button id="command-submit" type="submit" disabled>gönder ↵</button>
+              <button id="ctrl-c-button" class="interrupt-button" type="button" aria-label="Alpine komutunu CTRL+C ile durdur" disabled>CTRL+C</button>
               <button id="ctrl-z-button" class="interrupt-button" type="button" aria-label="Alpine komutunu CTRL+Z ile durdur" disabled>CTRL+Z</button>
             </form>
             <div class="terminal-footer">
               <span><i class="status-dot" id="status-dot"></i><span id="runtime-label">runtime bekliyor</span></span>
               <span class="terminal-hint">komut kutusunu veya terminali kullanın</span>
+              <div class="terminal-actions" aria-label="Terminal araçları">
+                <button class="terminal-action" id="copy-output" type="button" disabled>kopyala</button>
+                <button class="terminal-action" id="download-output" type="button" disabled>indir</button>
+              </div>
             </div>
           </div>
 
