@@ -53,11 +53,14 @@ jobs:
             --format=tar.gz --output="$GITHUB_WORKSPACE/dist/third-party/holyp-source.tar.gz" HEAD
           printf '%s\n' "$HOLYP_COMMIT" > dist/third-party/holyp-commit.txt
           cp tools/THIRD_PARTY_NOTICES.md dist/third-party/README.md
-          docker build --pull --platform linux/386 \
+          # Rebuild the runtime image from the checked-out sources. This is
+          # important for security-sensitive runtime files such as torrc:
+          # stale Docker layers must never survive into the Pages artifact.
+          docker build --pull --no-cache --platform linux/386 \
             --file .github/docker/alpine/Dockerfile \
             --tag webrunner-alpine:latest .
           docker run --rm --platform linux/386 webrunner-alpine:latest \
-            /bin/sh -c 'test -x /usr/bin/webrunner-tty && test -x /usr/bin/webrunner-tor'
+            /bin/sh -c 'test -x /usr/bin/webrunner-tty && test -x /usr/bin/webrunner-tor && ! grep -q "^PidFile " /etc/tor/torrc'
           alpine_container=$(docker create --platform linux/386 webrunner-alpine:latest)
           docker export "$alpine_container" --output "$RUNNER_TEMP/alpine-rootfs.tar"
           docker rm "$alpine_container"
