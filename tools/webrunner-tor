@@ -61,7 +61,7 @@ enable_transparent_mode() {
 
 show_status() {
   ip="$(ifconfig eth0 2>/dev/null | awk '/inet addr:/{sub("addr:", "", $2); print $2; exit}')"
-  tor_version="$(tor --version 2>/dev/null | sed -n 's/^Tor version //p' | tr ' ' '_')"
+  tor_version="$(tor --version 2>/dev/null | sed -n 's/^Tor version //p' | sed 's/[.]$//' | tr ' ' '_')"
   exit_ip=""
   tor_state="starting"
   route_state="inactive"

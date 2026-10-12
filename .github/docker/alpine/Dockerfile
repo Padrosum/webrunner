@@ -22,23 +22,23 @@ RUN apk add --no-cache \
       torsocks \
       w3m
 
-COPY --from=holyp-build /tmp/holyp/target/release/holyp /usr/local/bin/holyp
-COPY tools/webrunner-tor /usr/local/bin/webrunner-tor
-COPY tools/tft /usr/local/bin/tft
+COPY --from=holyp-build /tmp/holyp/target/release/holyp /usr/bin/holyp
+COPY tools/webrunner-tor /usr/bin/webrunner-tor
+COPY tools/tft /usr/bin/tft
 COPY tools/torrc /etc/tor/torrc
 COPY tools/holyc /usr/share/webrunner/holyc
 COPY tools/THIRD_PARTY_NOTICES.md /usr/share/doc/webrunner/THIRD_PARTY_NOTICES.md
 
 RUN for tool in net-info tor-info about; do \
-      printf '%s\n' '#!/bin/sh' "exec /usr/local/bin/holyp /usr/share/webrunner/holyc/$tool.HC \"\$@\"" > "/usr/local/bin/hc-$tool"; \
+      printf '%s\n' '#!/bin/sh' "exec /usr/bin/holyp /usr/share/webrunner/holyc/$tool.HC \"\$@\"" > "/usr/bin/hc-$tool"; \
     done \
- && chmod +x /usr/local/bin/holyp /usr/local/bin/webrunner-tor /usr/local/bin/tft /usr/local/bin/hc-* \
+ && chmod +x /usr/bin/holyp /usr/bin/webrunner-tor /usr/bin/tft /usr/bin/hc-* \
  && mkdir -p /run/tor /var/log/tor /var/lib/tor \
  && chown -R tor:tor /run/tor /var/log/tor /var/lib/tor \
  && tor --verify-config -f /etc/tor/torrc \
  && printf '%s\n' \
       "alpine=$(cat /etc/alpine-release)" \
-      "tor=$(tor --version | sed -n 's/^Tor version //p')" \
+      "tor=$(tor --version | sed -n 's/^Tor version //p' | sed 's/[.]$//')" \
       "holyp=$(holyp -V | sed -n 's/^holyp //p')" \
  > /etc/webrunner-versions
 
