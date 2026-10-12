@@ -18,6 +18,7 @@
   const commandForm = el("command-form");
   const commandInput = el("command-input");
   const commandSubmit = el("command-submit");
+  const serialConsole = el("serial-console");
   const bootVersion = el("boot-version");
   const runtimeVersion = el("runtime-version");
   const toast = el("toast");
@@ -27,6 +28,7 @@
   let shellReady = false;
   let readyTimer = null;
   let serialBuffer = "";
+  let serialOutput = "";
   let toastTimer = null;
 
   function showToast(message) {
@@ -146,7 +148,11 @@
     });
 
     emulator.add_listener("serial0-output-byte", (byte) => {
-      serialBuffer = `${serialBuffer}${String.fromCharCode(byte)}`.slice(-512);
+      const character = String.fromCharCode(byte);
+      serialOutput = `${serialOutput}${character}`.slice(-24000);
+      serialConsole.textContent = serialOutput;
+      serialConsole.scrollTop = serialConsole.scrollHeight;
+      serialBuffer = `${serialBuffer}${character}`.slice(-512);
       if (/(?:~#|localhost:~#|login:)/.test(serialBuffer)) markShellReady();
     });
 
@@ -181,6 +187,8 @@
     isStarting = true;
     shellReady = false;
     serialBuffer = "";
+    serialOutput = "";
+    serialConsole.textContent = "";
     window.clearTimeout(readyTimer);
     emptyState.hidden = true;
     boot.classList.remove("is-hidden");
@@ -216,6 +224,8 @@
     window.clearTimeout(readyTimer);
     shellReady = false;
     serialBuffer = "";
+    serialOutput = "";
+    serialConsole.textContent = "";
     commandInput.value = "";
     setRunningState(false);
     setProgress(25, "Alpine yeniden başlatılıyor...");
@@ -238,10 +248,10 @@
       if (!isStarting) start();
       return;
     }
-    if (typeof emulator.keyboard_send_text === "function") {
-      emulator.keyboard_send_text(`${normalizedCommand}\n`);
-    } else if (typeof emulator.serial0_send === "function") {
+    if (typeof emulator.serial0_send === "function") {
       emulator.serial0_send(`${normalizedCommand}\n`);
+    } else if (typeof emulator.keyboard_send_text === "function") {
+      emulator.keyboard_send_text(`${normalizedCommand}\n`);
     }
     commandInput.value = "";
   }
