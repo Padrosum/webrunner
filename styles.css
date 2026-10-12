@@ -87,7 +87,7 @@ h1 em, h2 em { font-family: Georgia, serif; font-weight: 400; letter-spacing: -.
 
 .button { border: 0; border-radius: 2px; cursor: pointer; transition: transform .18s ease, background .18s ease, opacity .18s ease; }
 .button:hover:not(:disabled) { transform: translateY(-2px); }
-.button:focus-visible, .command-chip:focus-visible, a:focus-visible { outline: 2px solid var(--ink); outline-offset: 4px; }
+.button:focus-visible, a:focus-visible { outline: 2px solid var(--ink); outline-offset: 4px; }
 .button-primary { padding: 14px 20px; background: var(--ink); color: var(--acid); font-family: var(--mono); font-size: 12px; font-weight: 500; text-transform: uppercase; letter-spacing: .04em; }
 .button-icon { display: inline-block; margin-right: 9px; font-size: 10px; }
 .text-link { padding-bottom: 4px; border-bottom: 1px solid var(--line); color: #626862; font-family: var(--mono); font-size: 11px; text-transform: uppercase; letter-spacing: .08em; }
@@ -141,10 +141,6 @@ h1 em, h2 em { font-family: Georgia, serif; font-weight: 400; letter-spacing: -.
 .side-block h2 { margin-top: 17px; font-size: 30px; line-height: 1.02; font-weight: 600; letter-spacing: -.07em; }
 .side-block h2 span { color: var(--muted); }
 .side-block p { margin-top: 15px; color: #737873; font-size: 13px; line-height: 1.55; }
-.command-list { margin-top: 15px; display: grid; gap: 7px; }
-.command-chip { display: flex; align-items: center; justify-content: space-between; width: 100%; padding: 10px 12px; border: 1px solid var(--line); background: transparent; cursor: pointer; text-align: left; transition: background .18s ease, border-color .18s ease, transform .18s ease; }
-.command-chip:hover { background: var(--acid-soft); border-color: var(--acid-soft); transform: translateX(3px); }
-.command-chip code { font: 11px var(--mono); }.command-chip span { color: var(--muted); font-size: 14px; }
 .spec-list { display: grid; gap: 11px; margin: 15px 0 0; }
 .spec-list div { display: flex; justify-content: space-between; gap: 10px; font: 11px var(--mono); }
 .spec-list dt { color: var(--muted); }.spec-list dd { margin: 0; color: var(--ink); }

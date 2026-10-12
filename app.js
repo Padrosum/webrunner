@@ -318,10 +318,6 @@
     commandInput.focus();
   });
 
-  document.querySelectorAll("[data-command]").forEach((button) => {
-    button.addEventListener("click", () => sendCommand(button.dataset.command));
-  });
-
   // Sayfa açıldığında terminali otomatik olarak yükle; kullanıcı düşük hareket
   // tercih ediyorsa aynı davranış korunur çünkü bu bir ekran geçişi değil runtime boot'udur.
   loadRuntimeMeta();
