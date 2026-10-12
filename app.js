@@ -204,7 +204,7 @@
     emulator.add_listener("serial0-output-byte", (byte) => {
       const character = String.fromCharCode(byte);
       handleSerialCharacter(character);
-      if (/(?:~#|localhost:~#|webrunner.*#|(?:^|\n)# )/.test(serialBuffer)) markShellReady();
+      if (/(?:~\s*#|localhost:~#|webrunner.*#|(?:^|\n)# )/.test(serialBuffer)) markShellReady();
     });
 
     emulator.add_listener("cpu-event-halt", () => {
