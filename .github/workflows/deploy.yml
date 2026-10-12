@@ -46,7 +46,7 @@ jobs:
           git clone --depth 1 https://github.com/copy/v86.git "$RUNNER_TEMP/v86"
           git clone --depth 1 https://github.com/Padrosum/holyp.git "$RUNNER_TEMP/holyp"
           HOLYP_COMMIT=$(git -C "$RUNNER_TEMP/holyp" rev-parse HEAD)
-          git -C "$RUNNER_TEMP/holyp" archive --format=tar --output=- HEAD \
+          git -C "$RUNNER_TEMP/holyp" archive --format=tar HEAD \
             | tar -x -C .github/docker/alpine/holyp-src
           git -C "$RUNNER_TEMP/holyp" archive \
             --format=tar.gz --output=dist/third-party/holyp-source.tar.gz HEAD
