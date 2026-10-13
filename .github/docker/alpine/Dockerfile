@@ -18,7 +18,8 @@ RUN apk add --no-cache \
       linux-${KERNEL} \
       linux-firmware-none \
       ca-certificates \
-      curl
+      curl \
+      libgcc
 
 COPY --from=holyp-build /tmp/holyp/target/release/holyp /usr/bin/holyp
 COPY --from=holyp-build /tmp/webrunner-tty /usr/bin/webrunner-tty

@@ -59,7 +59,7 @@ jobs:
             --file .github/docker/alpine/Dockerfile \
             --tag webrunner-alpine:latest .
           docker run --rm --platform linux/386 webrunner-alpine:latest \
-            /bin/sh -c 'test "$(/usr/bin/webrunner-tty --version)" = "WebRunner tty helper 2" && test -x /usr/bin/webrunner-net && ! command -v tor'
+            /bin/sh -c 'test "$(/usr/bin/webrunner-tty --version)" = "WebRunner tty helper 2" && test -x /usr/bin/webrunner-net && /usr/bin/holyp -V >/dev/null && /usr/bin/hc-about >/dev/null && /usr/bin/hc-net-info >/dev/null && ! command -v tor'
           alpine_container=$(docker create --platform linux/386 webrunner-alpine:latest)
           docker export "$alpine_container" --output "$RUNNER_TEMP/alpine-rootfs.tar"
           docker rm "$alpine_container"
