@@ -52,7 +52,6 @@
   let networkMarkerLine = "";
   let networkSetupStarted = false;
   let networkStatusTimer = null;
-  let networkStatusAttempts = 0;
 
   function showToast(message) {
     toast.textContent = message;
@@ -199,6 +198,7 @@
     if (shellReady) return;
     shellReady = true;
     window.clearTimeout(readyTimer);
+    toast.classList.remove("is-visible");
     setProgress(100, "terminal hazır — hoş geldiniz");
     boot.classList.add("is-hidden");
     setRuntimeState("çalışıyor", "Alpine aktif · Tor hazırlanıyor");
@@ -313,7 +313,7 @@
       setProgress(0, "Alpine shell bekleniyor...");
       setRuntimeState("bekliyor", "boot tamamlanamadı");
       showToast("Alpine shell henüz hazır değil. Runtime loglarını kontrol edin.");
-    }, 30000);
+    }, 90000);
   }
 
   async function start() {
@@ -338,7 +338,6 @@
     updateOutputActions();
     serialEscapeBuffer = "";
     networkSetupStarted = false;
-    networkStatusAttempts = 0;
     window.clearTimeout(networkStatusTimer);
     commandHistoryIndex = -1;
     serialConsole.value = "";
@@ -398,7 +397,7 @@
       setProgress(0, "Alpine shell bekleniyor...");
       setRuntimeState("bekliyor", "boot tamamlanamadı");
       showToast("Alpine yeniden başlatıldı fakat shell hazır olmadı.");
-    }, 30000);
+    }, 90000);
   }
 
   function sendCommand(command) {
@@ -419,7 +418,6 @@
   function startNetworkSetup() {
     if (networkSetupStarted) return;
     networkSetupStarted = true;
-    networkStatusAttempts = 0;
     networkDot.classList.add("is-warning");
     networkState.textContent = "Tor başlıyor";
     window.setTimeout(() => {
@@ -430,12 +428,11 @@
 
   function requestNetworkStatus() {
     if (!shellReady) return;
-    networkStatusAttempts += 1;
     sendSerialInput("/usr/bin/webrunner-tor status\n");
     window.clearTimeout(networkStatusTimer);
-    if (networkStatusAttempts < 12) {
-      networkStatusTimer = window.setTimeout(requestNetworkStatus, 22000);
-    }
+    // Tor may need several minutes on a cold start to download relay
+    // descriptors. Keep refreshing until it becomes ready.
+    networkStatusTimer = window.setTimeout(requestNetworkStatus, 22000);
   }
 
   function sendSerialInput(value) {
