@@ -51,6 +51,7 @@
   let commandHistoryIndex = -1;
   let networkMarkerLine = "";
   let networkSetupStarted = false;
+  let networkSetupStartedAt = 0;
   let networkStatusTimer = null;
 
   function showToast(message) {
@@ -81,14 +82,16 @@
 
   function applyNetworkStatus(ip, torState, torVersion, exitIp, routeState) {
     const isReady = torState === "ready" && routeState === "active";
-    const isStarting = torState === "starting";
+    const isWarmingUp = networkSetupStarted && Date.now() - networkSetupStartedAt < 90000
+      && torState === "stopped" && (ip === "unknown" || routeState === "inactive");
+    const isStarting = torState === "starting" || isWarmingUp;
     networkDot.classList.toggle("is-live", isReady);
     networkDot.classList.toggle("is-warning", isStarting);
     networkState.textContent = isReady ? "Tor + rota etkin" : isStarting ? "Tor bağlanıyor" : torState === "ready" ? "Tor etkin · rota bekliyor" : "Tor kapalı";
-    networkIp.textContent = ip || "bilinmiyor";
+    networkIp.textContent = isWarmingUp && ip === "unknown" ? "alınıyor" : ip || "bilinmiyor";
     networkExitIp.textContent = exitIp && exitIp !== "pending" ? exitIp : "bekliyor";
     networkTorVersion.textContent = torVersion || runtimeTorVersion.textContent || "bilinmiyor";
-    networkRoute.textContent = routeState === "active" ? "şeffaf TCP/DNS" : "etkin değil";
+    networkRoute.textContent = routeState === "active" ? "şeffaf TCP/DNS" : isWarmingUp ? "ağ hazırlanıyor" : "etkin değil";
     if (isReady) {
       window.clearTimeout(networkStatusTimer);
       setRuntimeState("çalışıyor", "Alpine aktif · Tor yönlendirmesi etkin");
@@ -338,6 +341,7 @@
     updateOutputActions();
     serialEscapeBuffer = "";
     networkSetupStarted = false;
+    networkSetupStartedAt = 0;
     window.clearTimeout(networkStatusTimer);
     commandHistoryIndex = -1;
     serialConsole.value = "";
@@ -382,6 +386,7 @@
     updateOutputActions();
     serialEscapeBuffer = "";
     networkSetupStarted = false;
+    networkSetupStartedAt = 0;
     window.clearTimeout(networkStatusTimer);
     commandHistoryIndex = -1;
     serialConsole.value = "";
@@ -418,6 +423,7 @@
   function startNetworkSetup() {
     if (networkSetupStarted) return;
     networkSetupStarted = true;
+    networkSetupStartedAt = Date.now();
     networkDot.classList.add("is-warning");
     networkState.textContent = "Tor başlıyor";
     window.setTimeout(() => {
