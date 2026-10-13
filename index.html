@@ -27,7 +27,7 @@
           <span>web<span class="brand-muted">/runner</span></span>
         </a>
         <div class="topbar-meta">
-          <span class="live-dot"><i></i> tarayıcı içi runtime</span>
+          <span class="live-dot"><i></i> başlatınca yüklenir</span>
           <a class="github-link" href="https://github.com/Padrosum/webrunner/actions" target="_blank" rel="noreferrer">
             GitHub Actions <span aria-hidden="true">↗</span>
           </a>
@@ -40,11 +40,11 @@
           <h1>Alpine Linux.<br /><em>Tarayıcının içinde.</em></h1>
           <p class="hero-copy">
             Hafif Linux dağıtımını gerçek bir x86 emülatörüyle doğrudan web sayfasında
-            açın. Kurulum yok, sanal makine yok — sadece bir terminal ve biraz merak.
+            açın. Başlatana kadar emülatör yüklenmez; kurulum yok, sanal makine yok.
           </p>
           <div class="hero-actions">
             <button class="button button-primary" id="hero-start" type="button">
-              <span class="button-icon">▶</span> terminali aç
+              <span class="button-icon" aria-hidden="true">▶</span><span id="start-label">Alpine'ı başlat</span>
             </button>
             <a class="text-link" href="#how-it-works">nasıl çalışıyor? <span>↓</span></a>
           </div>
@@ -69,39 +69,36 @@
                   <span>  /_/    \_\</span>
                 </div>
                 <div class="boot-title">Alpine Linux <span id="boot-version">stable</span></div>
-                <div class="boot-message" id="boot-message">emülatör hazırlanıyor...</div>
-                <div class="boot-progress"><span id="boot-progress-bar"></span></div>
+                <div class="boot-message" id="boot-message">Hazır. Alpine'ı açmak için üstteki düğmeye basın.</div>
+                <div class="boot-progress" id="boot-progress" hidden><span id="boot-progress-bar"></span></div>
               </div>
               <div class="screen-container" id="screen_container" tabindex="0" aria-label="Alpine Linux terminali">
                 <div class="screen-text" style="white-space: pre; font: 14px monospace; line-height: 14px"></div>
                 <canvas style="display: none"></canvas>
               </div>
               <textarea class="serial-console" id="serial-console" aria-label="Alpine serial terminali; yazmak için terminale tıklayın" readonly tabindex="0" spellcheck="false"></textarea>
-              <div class="terminal-empty" id="terminal-empty" hidden>
-                <span class="empty-prompt">$</span>
-                <p>Başlat düğmesine basarak Alpine Linux’u açın.</p>
-              </div>
             </div>
-            <form class="command-bar" id="command-form">
+            <form class="command-bar" id="command-form" autocomplete="off">
               <div class="command-entry">
                 <span class="input-prompt" aria-hidden="true">›</span>
                 <input
                   id="command-input"
                   type="text"
-                  placeholder="komut yazın…"
+                  placeholder="Örn. ls -la"
                   autocomplete="off"
                   autocapitalize="off"
                   spellcheck="false"
                   aria-label="Alpine komutu"
+                  aria-describedby="command-hint"
                   disabled
                 />
               </div>
               <div class="command-actions" aria-label="Komut kontrolleri">
                 <button id="command-submit" type="submit" disabled>gönder ↵</button>
-                <button id="ctrl-c-button" class="interrupt-button" type="button" aria-label="Alpine komutunu CTRL+C ile durdur" disabled>CTRL+C</button>
-                <button id="ctrl-z-button" class="interrupt-button" type="button" aria-label="Alpine komutunu CTRL+Z ile durdur" disabled>CTRL+Z</button>
+                <button id="ctrl-c-button" class="interrupt-button" type="button" aria-label="Çalışan Alpine komutunu kes" title="Çalışan komutu kes" disabled>CTRL+C</button>
+                <button id="ctrl-z-button" class="interrupt-button" type="button" aria-label="Ön plandaki Alpine komutunu askıya al" title="Ön plandaki komutu askıya al" disabled>CTRL+Z</button>
               </div>
-              <div class="command-hint" aria-hidden="true"><kbd>Enter</kbd> çalıştır <kbd>↑ ↓</kbd> geçmiş <kbd>Esc</kbd> temizle</div>
+              <div class="command-hint" id="command-hint"><kbd>Enter</kbd> çalıştır <kbd>↑ ↓</kbd> geçmiş <kbd>Esc</kbd> temizle</div>
             </form>
             <div class="terminal-footer">
               <span><i class="status-dot" id="status-dot"></i><span id="runtime-label">runtime bekliyor</span></span>
@@ -133,9 +130,9 @@
               </dl>
             </div>
 
-            <div class="side-block network-block" aria-live="polite">
+            <div class="side-block network-block">
               <div class="section-label">gizlilik ağı</div>
-              <div class="network-state-line"><i class="network-dot" id="network-dot"></i><strong id="network-state">bekliyor</strong></div>
+              <div class="network-state-line"><i class="network-dot" id="network-dot" aria-hidden="true"></i><strong id="network-state" role="status" aria-live="polite" aria-atomic="true">bekliyor</strong></div>
               <dl class="network-list">
                 <div><dt>Alpine IP</dt><dd id="network-ip">—</dd></div>
                 <div><dt>Tor çıkışı</dt><dd id="network-exit-ip">—</dd></div>
@@ -143,12 +140,12 @@
                 <div><dt>rota</dt><dd id="network-route">—</dd></div>
               </dl>
               <button class="network-refresh" id="network-refresh" type="button" disabled>↻ ağı sorgula</button>
-              <p class="network-note">Tor çıkış IP’si, bu oturumun dışarıdan görünen adresidir. Tarayıcı relay bağlantısı Tor’a dahil değildir.</p>
+              <p class="network-note">Tor yalnızca Alpine içindeki TCP/DNS trafiğini yönlendirir; tarayıcı ve emülatör relay bağlantısı Tor üzerinden geçmez.</p>
             </div>
 
             <div class="sidebar-actions">
               <button class="button button-secondary" id="restart-button" type="button" disabled>↻ yeniden başlat</button>
-              <button class="button button-quiet" id="stop-button" type="button" disabled>■ durdur</button>
+              <button class="button button-quiet" id="stop-button" type="button" disabled>Ⅱ duraklat</button>
             </div>
           </aside>
         </section>

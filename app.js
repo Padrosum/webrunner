@@ -10,11 +10,12 @@
   const boot = el("terminal-boot");
   const bootMessage = el("boot-message");
   const bootProgress = el("boot-progress-bar");
+  const bootProgressTrack = el("boot-progress");
   const stateLabel = el("terminal-state");
   const runtimeLabel = el("runtime-label");
   const statusDot = el("status-dot");
-  const emptyState = el("terminal-empty");
   const startButton = el("hero-start");
+  const startButtonLabel = el("start-label");
   const restartButton = el("restart-button");
   const stopButton = el("stop-button");
   const commandForm = el("command-form");
@@ -52,7 +53,11 @@
   let networkMarkerLine = "";
   let networkSetupStarted = false;
   let networkSetupStartedAt = 0;
+  let networkSetupTimer = null;
   let networkStatusTimer = null;
+  let shellPromptVisible = false;
+  let shellPromptExpected = false;
+  let terminalLineBuffer = "";
 
   function showToast(message) {
     toast.textContent = message;
@@ -62,6 +67,7 @@
   }
 
   function setProgress(value, message) {
+    bootProgressTrack.hidden = false;
     bootProgress.style.width = `${Math.max(0, Math.min(100, value))}%`;
     if (message) bootMessage.textContent = message;
   }
@@ -107,7 +113,8 @@
     ctrlCButton.disabled = !running;
     ctrlZButton.disabled = !running;
     networkRefreshButton.disabled = !running;
-    startButton.disabled = running || isStarting;
+    startButton.disabled = running || isStarting || Boolean(emulator && !shellReady);
+    startButtonLabel.textContent = isStarting ? "Başlatılıyor…" : running ? "Terminal açık" : emulator && shellReady ? "Devam et" : emulator ? "Alpine başlatılıyor…" : "Alpine'ı başlat";
   }
 
   function updateOutputActions() {
@@ -200,6 +207,7 @@
   function markShellReady() {
     if (shellReady) return;
     shellReady = true;
+    isStarting = false;
     window.clearTimeout(readyTimer);
     toast.classList.remove("is-visible");
     setProgress(100, "terminal hazır — hoş geldiniz");
@@ -302,10 +310,19 @@
     emulator.add_listener("serial0-output-byte", (byte) => {
       const character = String.fromCharCode(byte);
       handleSerialCharacter(character);
-      if (/(?:~\s*#|localhost:~#|webrunner.*#|(?:^|\n)# )/.test(serialBuffer)) markShellReady();
+      const visibleSerial = serialBuffer.replace(/\u001b\[[0-?]*[ -/]*[@-~]/g, "");
+      const promptSeen = /(?:~\s*#|localhost:~#|webrunner[^\r\n]*#|(?:^|\n)# )\s*$/.test(visibleSerial);
+      if (promptSeen && (!shellReady || shellPromptExpected)) {
+        shellPromptVisible = true;
+        shellPromptExpected = false;
+        terminalLineBuffer = "";
+        markShellReady();
+      }
     });
 
     emulator.add_listener("cpu-event-halt", () => {
+      window.clearTimeout(networkStatusTimer);
+      window.clearTimeout(networkSetupTimer);
       setRuntimeState("durduruldu", "runtime durduruldu");
       setRunningState(false);
     });
@@ -313,8 +330,12 @@
     // Only enable input after the guest has actually exposed a shell prompt.
     readyTimer = window.setTimeout(() => {
       if (shellReady) return;
-      setProgress(0, "Alpine shell bekleniyor...");
+      try { emulator?.stop(); } catch (_) { /* Sonraki denemede temiz runtime kurulur. */ }
+      emulator = null;
+      isStarting = false;
+      setProgress(0, "Açılış tamamlanmadı. Yeniden deneyebilirsiniz.");
       setRuntimeState("bekliyor", "boot tamamlanamadı");
+      setRunningState(false);
       showToast("Alpine shell henüz hazır değil. Runtime loglarını kontrol edin.");
     }, 90000);
   }
@@ -327,6 +348,8 @@
         boot.classList.add("is-hidden");
         setRuntimeState("çalışıyor", "Alpine aktif");
         setRunningState(true);
+        if (!networkSetupStarted) startNetworkSetup();
+        else requestNetworkStatus();
       } else {
         setRuntimeState("başlıyor", "Alpine boot ediliyor");
       }
@@ -342,37 +365,47 @@
     serialEscapeBuffer = "";
     networkSetupStarted = false;
     networkSetupStartedAt = 0;
+    shellPromptVisible = false;
+    shellPromptExpected = false;
+    terminalLineBuffer = "";
     window.clearTimeout(networkStatusTimer);
+    window.clearTimeout(networkSetupTimer);
     commandHistoryIndex = -1;
     serialConsole.value = "";
     resetNetworkStatus();
     window.clearTimeout(readyTimer);
-    emptyState.hidden = true;
     boot.classList.remove("is-hidden");
     setRuntimeState("yükleniyor", "runtime hazırlanıyor");
-    startButton.disabled = true;
+    setProgress(4, "Emülatör hazırlanıyor…");
+    setRunningState(false);
 
     try {
       await createEmulator();
     } catch (error) {
       console.error(error);
-      setProgress(0, "yükleme başarısız");
+      try { emulator?.stop(); } catch (_) { /* Kısmi başlatma temizlenemeyebilir. */ }
+      emulator = null;
+      setProgress(0, "Başlatılamadı. Yeniden deneyebilirsiniz.");
       setRuntimeState("hata", "runtime yüklenemedi");
       showToast("Alpine runtime yüklenemedi. GitHub Actions derlemesinin tamamlandığından emin olun.");
-      startButton.disabled = false;
-      emptyState.hidden = false;
     } finally {
       isStarting = false;
+      setRunningState(shellReady);
     }
   }
 
   function stop() {
     if (!emulator) return;
     window.clearTimeout(readyTimer);
+    window.clearTimeout(networkStatusTimer);
+    window.clearTimeout(networkSetupTimer);
     emulator.stop();
     boot.classList.remove("is-hidden");
     setProgress(100, "runtime duraklatıldı");
     setRuntimeState("duraklatıldı", "devam etmek için terminali açın");
+    resetNetworkStatus();
+    networkState.textContent = "terminal duraklatıldı";
+    networkRoute.textContent = "duraklatıldı";
     setRunningState(false);
   }
 
@@ -380,6 +413,10 @@
     if (!emulator) return;
     window.clearTimeout(readyTimer);
     shellReady = false;
+    isStarting = true;
+    shellPromptVisible = false;
+    shellPromptExpected = false;
+    terminalLineBuffer = "";
     serialBuffer = "";
     networkMarkerLine = "";
     serialOutput = "";
@@ -388,6 +425,7 @@
     networkSetupStarted = false;
     networkSetupStartedAt = 0;
     window.clearTimeout(networkStatusTimer);
+    window.clearTimeout(networkSetupTimer);
     commandHistoryIndex = -1;
     serialConsole.value = "";
     commandInput.value = "";
@@ -399,8 +437,12 @@
     emulator.restart();
     readyTimer = window.setTimeout(() => {
       if (shellReady) return;
-      setProgress(0, "Alpine shell bekleniyor...");
+      try { emulator?.stop(); } catch (_) { /* Sonraki denemede temiz runtime kurulur. */ }
+      emulator = null;
+      isStarting = false;
+      setProgress(0, "Açılış tamamlanmadı. Yeniden deneyebilirsiniz.");
       setRuntimeState("bekliyor", "boot tamamlanamadı");
+      setRunningState(false);
       showToast("Alpine yeniden başlatıldı fakat shell hazır olmadı.");
     }, 90000);
   }
@@ -413,6 +455,13 @@
       if (!isStarting) start();
       return;
     }
+    if (!shellPromptVisible) {
+      showToast("Önce terminalde çalışan komutun tamamlanmasını bekleyin.");
+      return;
+    }
+    shellPromptVisible = false;
+    shellPromptExpected = true;
+    terminalLineBuffer = "";
     sendSerialInput(`${normalizedCommand}\n`);
     if (commandHistory[commandHistory.length - 1] !== normalizedCommand) commandHistory.push(normalizedCommand);
     commandHistory = commandHistory.slice(-50);
@@ -422,18 +471,33 @@
 
   function startNetworkSetup() {
     if (networkSetupStarted) return;
-    networkSetupStarted = true;
-    networkSetupStartedAt = Date.now();
     networkDot.classList.add("is-warning");
     networkState.textContent = "Tor başlıyor";
-    window.setTimeout(() => {
+    const launchWhenIdle = () => {
+      if (!shellReady) return;
+      if (!shellPromptVisible) {
+        networkSetupTimer = window.setTimeout(launchWhenIdle, 1000);
+        return;
+      }
+      networkSetupStarted = true;
+      networkSetupStartedAt = Date.now();
+      shellPromptVisible = false;
+      shellPromptExpected = true;
       sendSerialInput("(ifconfig lo up && ifconfig eth0 up && udhcpc -i eth0 && /usr/bin/webrunner-tor start && /usr/bin/webrunner-tor transparent) </dev/null >/var/log/webrunner-network.log 2>&1 &\n");
       window.setTimeout(requestNetworkStatus, 7000);
-    }, 250);
+    };
+    networkSetupTimer = window.setTimeout(launchWhenIdle, 250);
   }
 
   function requestNetworkStatus() {
     if (!shellReady) return;
+    if (!shellPromptVisible) {
+      window.clearTimeout(networkStatusTimer);
+      networkStatusTimer = window.setTimeout(requestNetworkStatus, 3000);
+      return;
+    }
+    shellPromptVisible = false;
+    shellPromptExpected = true;
     sendSerialInput("/usr/bin/webrunner-tor status\n");
     window.clearTimeout(networkStatusTimer);
     // Tor may need several minutes on a cold start to download relay
@@ -455,6 +519,9 @@
   }
 
   function sendControlCharacter(character) {
+    shellPromptVisible = false;
+    shellPromptExpected = true;
+    terminalLineBuffer = "";
     if (!sendSerialInput(character)) showToast("Alpine terminali henüz hazır değil.");
     commandInput.focus();
   }
@@ -491,6 +558,24 @@
     }
     if (!value) return;
     event.preventDefault();
+    const controlKey = event.ctrlKey && ["c", "d", "z"].includes(event.key.toLowerCase());
+    if (event.key === "Enter" || controlKey) {
+      shellPromptVisible = false;
+      shellPromptExpected = true;
+      terminalLineBuffer = "";
+    } else if (event.ctrlKey && event.key.toLowerCase() === "u") {
+      terminalLineBuffer = "";
+      shellPromptVisible = true;
+    } else if (event.key === "Backspace") {
+      terminalLineBuffer = terminalLineBuffer.slice(0, -1);
+      if (!terminalLineBuffer) shellPromptVisible = true;
+    } else if (["Tab", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Home", "End", "Delete"].includes(event.key)) {
+      terminalLineBuffer = terminalLineBuffer || " ";
+      shellPromptVisible = false;
+    } else if (!event.ctrlKey && !event.altKey && !event.metaKey && event.key.length === 1) {
+      terminalLineBuffer += event.key;
+      shellPromptVisible = false;
+    }
     sendSerialInput(value);
   }
 
@@ -515,7 +600,7 @@
     link.href = url;
     link.download = "webrunner-terminal.txt";
     link.click();
-    URL.revokeObjectURL(url);
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
 
   startButton.addEventListener("click", start);
@@ -523,7 +608,13 @@
   stopButton.addEventListener("click", stop);
   ctrlCButton.addEventListener("click", sendCtrlC);
   ctrlZButton.addEventListener("click", sendCtrlZ);
-  networkRefreshButton.addEventListener("click", requestNetworkStatus);
+  networkRefreshButton.addEventListener("click", () => {
+    if (!shellPromptVisible) {
+      showToast("Ağ bilgisi, terminal komutu tamamlanınca güncellenecek.");
+      return;
+    }
+    requestNetworkStatus();
+  });
   serialConsole.addEventListener("keydown", sendTerminalKey);
   copyOutputButton.addEventListener("click", copyOutput);
   downloadOutputButton.addEventListener("click", downloadOutput);
@@ -550,8 +641,6 @@
     }
   });
 
-  // Sayfa açıldığında terminali otomatik olarak yükle; kullanıcı düşük hareket
-  // tercih ediyorsa aynı davranış korunur çünkü bu bir ekran geçişi değil runtime boot'udur.
+  // Runtime is large; wait until the user explicitly asks to start it.
   loadRuntimeMeta();
-  window.setTimeout(start, 650);
 })();
