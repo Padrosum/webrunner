@@ -263,7 +263,7 @@
       assetUrl("vgabios.bin", `${REMOTE}/bios/vgabios.bin`),
       assetUrl("vmlinuz-virt", null),
       assetUrl("initramfs-virt", null),
-      assetUrl("alpine-fs.json", null),
+      assetUrl(`alpine-fs-${BUILD_ID}.json`, null),
     ]);
 
     setProgress(38, "Alpine çekirdeği yükleniyor...");
@@ -281,7 +281,7 @@
       bzimage: { url: kernel, async: false },
       initrd: { url: initrd, async: false },
       filesystem: {
-        baseurl: `${LOCAL}/alpine-rootfs-flat`,
+        baseurl: `${LOCAL}/alpine-rootfs-flat-${BUILD_ID}`,
         basefs: filesystemIndex,
       },
       bzimage_initrd_from_filesystem: false,
