@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/wait.h>
 #include <sys/ioctl.h>
 #include <sys/stat.h>
 #include <unistd.h>
@@ -12,7 +13,7 @@ static void fail(const char *message) {
   _exit(1);
 }
 
-int main(void) {
+static void run_shell(void) {
   int tty = open("/dev/ttyS0", O_RDWR | O_NOCTTY);
   if (tty < 0) fail("tty açılamadı");
 
@@ -24,7 +25,7 @@ int main(void) {
   chmod("/dev/random", 0666);
   chmod("/dev/urandom", 0666);
 
-  if (setsid() < 0 && errno != EPERM) fail("yeni oturum açılamadı");
+  if (setsid() < 0) fail("yeni oturum açılamadı");
   if (ioctl(tty, TIOCSCTTY, 1) < 0 && errno != EPERM) fail("kontrol terminali atanamadı");
 
   if (dup2(tty, STDIN_FILENO) < 0 ||
@@ -36,5 +37,31 @@ int main(void) {
 
   execl("/bin/sh", "sh", "-i", (char *)NULL);
   fail("shell başlatılamadı");
-  return 1;
+}
+
+int main(void) {
+  // PID 1 cannot create a new session because it is already a process-group
+  // leader. Run the interactive shell as a child so it can own the tty's
+  // foreground process group; this makes job-control keys such as Ctrl+Z
+  // generate SIGTSTP for foreground commands as expected.
+  if (getpid() != 1) {
+    run_shell();
+    return 1;
+  }
+
+  for (;;) {
+    pid_t shell = fork();
+    if (shell == 0) {
+      run_shell();
+      _exit(1);
+    }
+    if (shell < 0) {
+      sleep(1);
+      continue;
+    }
+
+    int status;
+    while (waitpid(shell, &status, 0) < 0 && errno == EINTR) {
+    }
+  }
 }

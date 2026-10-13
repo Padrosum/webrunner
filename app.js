@@ -49,6 +49,7 @@
   let toastTimer = null;
   let commandHistory = [];
   let commandHistoryIndex = -1;
+  let networkMarkerLine = "";
   let networkSetupStarted = false;
   let networkStatusTimer = null;
   let networkStatusAttempts = 0;
@@ -133,16 +134,28 @@
   function consumeNetworkMarker() {
     const match = serialOutput.match(/__WEBRUNNER_NET__\|([^\r\n]*)/);
     if (!match) return;
-    const [ip, torState, torVersion, exitIp, routeState] = match[1].split("|");
-    applyNetworkStatus(ip, torState, torVersion, exitIp, routeState);
     serialOutput = serialOutput.replace(match[0], "");
     serialBuffer = serialBuffer.replace(match[0], "");
     updateOutputActions();
     renderSerialOutput();
   }
 
+  function consumeNetworkStatusLine(character) {
+    if (character !== "\r" && character !== "\n") {
+      networkMarkerLine = `${networkMarkerLine}${character}`.slice(-256);
+      return;
+    }
+
+    const match = networkMarkerLine.match(/__WEBRUNNER_NET__\|([^\r\n]*)/);
+    networkMarkerLine = "";
+    if (!match) return;
+    const [ip, torState, torVersion, exitIp, routeState] = match[1].split("|");
+    applyNetworkStatus(ip, torState, torVersion, exitIp, routeState);
+  }
+
   function handleSerialCharacter(character) {
     serialBuffer = `${serialBuffer}${character}`.slice(-512);
+    consumeNetworkStatusLine(character);
 
     if (serialEscapeBuffer) {
       serialEscapeBuffer += character;
@@ -319,6 +332,7 @@
     isStarting = true;
     shellReady = false;
     serialBuffer = "";
+    networkMarkerLine = "";
     serialOutput = "";
     updateOutputActions();
     serialEscapeBuffer = "";
@@ -363,6 +377,7 @@
     window.clearTimeout(readyTimer);
     shellReady = false;
     serialBuffer = "";
+    networkMarkerLine = "";
     serialOutput = "";
     updateOutputActions();
     serialEscapeBuffer = "";
