@@ -53,20 +53,19 @@ jobs:
             --format=tar.gz --output="$GITHUB_WORKSPACE/dist/third-party/holyp-source.tar.gz" HEAD
           printf '%s\n' "$HOLYP_COMMIT" > dist/third-party/holyp-commit.txt
           cp tools/THIRD_PARTY_NOTICES.md dist/third-party/README.md
-          # Rebuild the runtime image from the checked-out sources. This is
-          # important for security-sensitive runtime files such as torrc:
-          # stale Docker layers must never survive into the Pages artifact.
+          # Rebuild the runtime image from the checked-out sources so the
+          # published Alpine environment always matches this repository.
           docker build --pull --no-cache --platform linux/386 \
             --file .github/docker/alpine/Dockerfile \
             --tag webrunner-alpine:latest .
           docker run --rm --platform linux/386 webrunner-alpine:latest \
-            /bin/sh -c 'test "$(/usr/bin/webrunner-tty --version)" = "WebRunner tty helper 2" && test -x /usr/bin/webrunner-tor && ! grep -q "^PidFile " /etc/tor/torrc'
+            /bin/sh -c 'test "$(/usr/bin/webrunner-tty --version)" = "WebRunner tty helper 2" && test -x /usr/bin/webrunner-net && ! command -v tor'
           alpine_container=$(docker create --platform linux/386 webrunner-alpine:latest)
           docker export "$alpine_container" --output "$RUNNER_TEMP/alpine-rootfs.tar"
           docker rm "$alpine_container"
 
           tar -tf "$RUNNER_TEMP/alpine-rootfs.tar" | grep -x 'usr/bin/webrunner-tty' >/dev/null
-          tar -tf "$RUNNER_TEMP/alpine-rootfs.tar" | grep -x 'usr/bin/webrunner-tor' >/dev/null
+          tar -tf "$RUNNER_TEMP/alpine-rootfs.tar" | grep -x 'usr/bin/webrunner-net' >/dev/null
 
           mkdir -p dist/assets/alpine-rootfs-flat
           python3 "$RUNNER_TEMP/v86/tools/fs2json.py" \
@@ -81,12 +80,10 @@ jobs:
           tar -xOf "$RUNNER_TEMP/alpine-rootfs.tar" boot/vmlinuz-virt > dist/assets/vmlinuz-virt
           tar -xOf "$RUNNER_TEMP/alpine-rootfs.tar" boot/initramfs-virt > dist/assets/initramfs-virt
           ALPINE_VERSION=$(tar -xOf "$RUNNER_TEMP/alpine-rootfs.tar" etc/alpine-release | tr -d '\n')
-          TOR_VERSION=$(tar -xOf "$RUNNER_TEMP/alpine-rootfs.tar" etc/webrunner-versions \
-            | sed -n 's/^tor=//p' | tr -d '\n')
           HOLYP_VERSION=$(tar -xOf "$RUNNER_TEMP/alpine-rootfs.tar" etc/webrunner-versions \
             | sed -n 's/^holyp=//p' | tr -d '\n')
-          printf '{"alpine_version":"%s","tor_version":"%s","holyp_version":"%s","holyp_commit":"%s"}\n' \
-            "$ALPINE_VERSION" "$TOR_VERSION" "$HOLYP_VERSION" "$HOLYP_COMMIT" > dist/runtime.json
+          printf '{"alpine_version":"%s","holyp_version":"%s","holyp_commit":"%s"}\n' \
+            "$ALPINE_VERSION" "$HOLYP_VERSION" "$HOLYP_COMMIT" > dist/runtime.json
 
           curl --fail --location --retry 4 --retry-all-errors --silent --show-error \
             "$V86_BASE/build/libv86.js" -o dist/assets/libv86.js

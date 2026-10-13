@@ -18,8 +18,7 @@ static void run_shell(void) {
   if (tty < 0) fail("tty açılamadı");
 
   // The browser boot path intentionally skips OpenRC, so mdev may leave the
-  // standard entropy/null devices root-only. Tor drops to the tor user and
-  // needs these devices during daemon startup.
+  // Keep the basic devices usable when the browser boot path skips OpenRC.
   chmod("/dev/null", 0666);
   chmod("/dev/zero", 0666);
   chmod("/dev/random", 0666);

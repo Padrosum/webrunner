@@ -18,30 +18,20 @@ RUN apk add --no-cache \
       linux-${KERNEL} \
       linux-firmware-none \
       ca-certificates \
-      curl \
-      iptables \
-      tor \
-      torsocks \
-      w3m
+      curl
 
 COPY --from=holyp-build /tmp/holyp/target/release/holyp /usr/bin/holyp
 COPY --from=holyp-build /tmp/webrunner-tty /usr/bin/webrunner-tty
-COPY tools/webrunner-tor /usr/bin/webrunner-tor
-COPY tools/tft /usr/bin/tft
-COPY tools/torrc /etc/tor/torrc
+COPY tools/webrunner-net /usr/bin/webrunner-net
 COPY tools/holyc /usr/share/webrunner/holyc
 COPY tools/THIRD_PARTY_NOTICES.md /usr/share/doc/webrunner/THIRD_PARTY_NOTICES.md
 
-RUN for tool in net-info tor-info about; do \
+RUN for tool in net-info about; do \
       printf '%s\n' '#!/bin/sh' "exec /usr/bin/holyp /usr/share/webrunner/holyc/$tool.HC \"\$@\"" > "/usr/bin/hc-$tool"; \
     done \
- && chmod +x /usr/bin/holyp /usr/bin/webrunner-tty /usr/bin/webrunner-tor /usr/bin/tft /usr/bin/hc-* \
- && mkdir -p /run/tor /var/log/tor /var/lib/tor \
- && chown -R tor:tor /run/tor /var/log/tor /var/lib/tor \
- && tor --verify-config -f /etc/tor/torrc \
+ && chmod +x /usr/bin/holyp /usr/bin/webrunner-tty /usr/bin/webrunner-net /usr/bin/hc-* \
  && printf '%s\n' \
       "alpine=$(cat /etc/alpine-release)" \
-      "tor=$(tor --version | sed -n 's/^Tor version //p' | sed 's/[.]$//')" \
       "holyp=$(holyp -V | sed -n 's/^holyp //p')" \
  > /etc/webrunner-versions
 

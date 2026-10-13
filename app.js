@@ -28,14 +28,12 @@
   const downloadOutputButton = el("download-output");
   const bootVersion = el("boot-version");
   const runtimeVersion = el("runtime-version");
-  const runtimeTorVersion = el("runtime-tor-version");
   const runtimeHolypVersion = el("runtime-holyp-version");
   const networkRefreshButton = el("network-refresh");
   const networkDot = el("network-dot");
   const networkState = el("network-state");
   const networkIp = el("network-ip");
-  const networkExitIp = el("network-exit-ip");
-  const networkTorVersion = el("network-tor-version");
+  const networkDns = el("network-dns");
   const networkRoute = el("network-route");
   const toast = el("toast");
 
@@ -52,7 +50,6 @@
   let commandHistoryIndex = -1;
   let networkMarkerLine = "";
   let networkSetupStarted = false;
-  let networkSetupStartedAt = 0;
   let networkSetupTimer = null;
   let networkStatusTimer = null;
   let shellPromptVisible = false;
@@ -81,26 +78,22 @@
     networkDot.classList.remove("is-live", "is-warning");
     networkState.textContent = "bekliyor";
     networkIp.textContent = "—";
-    networkExitIp.textContent = "—";
-    networkTorVersion.textContent = runtimeTorVersion.textContent || "—";
+    networkDns.textContent = "—";
     networkRoute.textContent = "—";
   }
 
-  function applyNetworkStatus(ip, torState, torVersion, exitIp, routeState) {
-    const isReady = torState === "ready" && routeState === "active";
-    const isWarmingUp = networkSetupStarted && Date.now() - networkSetupStartedAt < 90000
-      && torState === "stopped" && (ip === "unknown" || routeState === "inactive");
-    const isStarting = torState === "starting" || isWarmingUp;
+  function applyNetworkStatus(ip, networkStateValue, routeState, dns) {
+    const isReady = networkStateValue === "ready" && routeState === "active";
+    const isStarting = networkStateValue === "starting";
     networkDot.classList.toggle("is-live", isReady);
     networkDot.classList.toggle("is-warning", isStarting);
-    networkState.textContent = isReady ? "Tor + rota etkin" : isStarting ? "Tor bağlanıyor" : torState === "ready" ? "Tor etkin · rota bekliyor" : "Tor kapalı";
-    networkIp.textContent = isWarmingUp && ip === "unknown" ? "alınıyor" : ip || "bilinmiyor";
-    networkExitIp.textContent = exitIp && exitIp !== "pending" ? exitIp : "bekliyor";
-    networkTorVersion.textContent = torVersion || runtimeTorVersion.textContent || "bilinmiyor";
-    networkRoute.textContent = routeState === "active" ? "şeffaf TCP/DNS" : isWarmingUp ? "ağ hazırlanıyor" : "etkin değil";
+    networkState.textContent = isReady ? "ağ etkin" : isStarting ? "ağ hazırlanıyor" : networkStateValue === "ready" ? "rota bekliyor" : "ağ kapalı";
+    networkIp.textContent = ip || "bilinmiyor";
+    networkDns.textContent = dns || "atanmadı";
+    networkRoute.textContent = routeState === "active" ? "varsayılan rota" : isStarting ? "hazırlanıyor" : "etkin değil";
     if (isReady) {
       window.clearTimeout(networkStatusTimer);
-      setRuntimeState("çalışıyor", "Alpine aktif · Tor yönlendirmesi etkin");
+      setRuntimeState("çalışıyor", "Alpine aktif · ağ hazır");
     }
   }
 
@@ -156,11 +149,11 @@
       networkMarkerLine = `${networkMarkerLine}${character}`.slice(-256);
     }
 
-    const match = networkMarkerLine.match(/__WEBRUNNER_NET__\|([^|\r\n]*)\|(starting|ready|stopped)\|([^|\r\n]*)\|([^|\r\n]*)\|(active|inactive)/);
+    const match = networkMarkerLine.match(/__WEBRUNNER_NET__\|([^|\r\n]*)\|(starting|ready|stopped)\|(active|inactive)\|([^|\r\n]*)/);
     if (!match) return;
-    const [, ip, torState, torVersion, exitIp, routeState] = match;
+    const [, ip, networkStateValue, routeState, dns] = match;
     networkMarkerLine = "";
-    applyNetworkStatus(ip, torState, torVersion, exitIp, routeState);
+    applyNetworkStatus(ip, networkStateValue, routeState, dns);
   }
 
   function handleSerialCharacter(character) {
@@ -212,7 +205,7 @@
     toast.classList.remove("is-visible");
     setProgress(100, "terminal hazır — hoş geldiniz");
     boot.classList.add("is-hidden");
-    setRuntimeState("çalışıyor", "Alpine aktif · Tor hazırlanıyor");
+    setRuntimeState("çalışıyor", "Alpine aktif · ağ hazırlanıyor");
     setRunningState(true);
     resetNetworkStatus();
     startNetworkSetup();
@@ -226,9 +219,7 @@
       const label = meta.alpine_version || "stable";
       bootVersion.textContent = label;
       runtimeVersion.textContent = `Alpine ${label}`;
-      runtimeTorVersion.textContent = meta.tor_version ? `Tor ${meta.tor_version}` : "Tor paketleniyor";
       runtimeHolypVersion.textContent = meta.holyp_version ? `HolyP ${meta.holyp_version}` : "HolyP paketleniyor";
-      if (!shellReady) networkTorVersion.textContent = runtimeTorVersion.textContent;
     } catch (_) {
       // Local source preview may not have the generated runtime metadata yet.
     }
@@ -364,7 +355,6 @@
     updateOutputActions();
     serialEscapeBuffer = "";
     networkSetupStarted = false;
-    networkSetupStartedAt = 0;
     shellPromptVisible = false;
     shellPromptExpected = false;
     terminalLineBuffer = "";
@@ -423,7 +413,6 @@
     updateOutputActions();
     serialEscapeBuffer = "";
     networkSetupStarted = false;
-    networkSetupStartedAt = 0;
     window.clearTimeout(networkStatusTimer);
     window.clearTimeout(networkSetupTimer);
     commandHistoryIndex = -1;
@@ -472,7 +461,7 @@
   function startNetworkSetup() {
     if (networkSetupStarted) return;
     networkDot.classList.add("is-warning");
-    networkState.textContent = "Tor başlıyor";
+    networkState.textContent = "ağ başlıyor";
     const launchWhenIdle = () => {
       if (!shellReady) return;
       if (!shellPromptVisible) {
@@ -480,10 +469,9 @@
         return;
       }
       networkSetupStarted = true;
-      networkSetupStartedAt = Date.now();
       shellPromptVisible = false;
       shellPromptExpected = true;
-      sendSerialInput("(ifconfig lo up && ifconfig eth0 up && udhcpc -i eth0 && /usr/bin/webrunner-tor start && /usr/bin/webrunner-tor transparent) </dev/null >/var/log/webrunner-network.log 2>&1 &\n");
+      sendSerialInput("(ifconfig lo up && ifconfig eth0 up && udhcpc -i eth0) </dev/null >/var/log/webrunner-network.log 2>&1 &\n");
       window.setTimeout(requestNetworkStatus, 7000);
     };
     networkSetupTimer = window.setTimeout(launchWhenIdle, 250);
@@ -498,10 +486,8 @@
     }
     shellPromptVisible = false;
     shellPromptExpected = true;
-    sendSerialInput("/usr/bin/webrunner-tor status\n");
+    sendSerialInput("/usr/bin/webrunner-net status\n");
     window.clearTimeout(networkStatusTimer);
-    // Tor may need several minutes on a cold start to download relay
-    // descriptors. Keep refreshing until it becomes ready.
     networkStatusTimer = window.setTimeout(requestNetworkStatus, 22000);
   }
 

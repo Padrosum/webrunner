@@ -1,0 +1,23 @@
+#!/bin/sh
+
+# Small, read-only network status helper for the Alpine guest.
+set -u
+
+ip="$(ifconfig eth0 2>/dev/null | awk '/inet addr:/{sub("addr:", "", $2); print $2; exit}')"
+dns="$(awk '/^[[:space:]]*nameserver[[:space:]]/{print $2; exit}' /etc/resolv.conf 2>/dev/null || true)"
+route_state="inactive"
+
+if ip route 2>/dev/null | awk '$1 == "default" { found=1 } END { exit(found ? 0 : 1) }'; then
+  route_state="active"
+fi
+
+if [ -n "$ip" ] && [ "$route_state" = "active" ]; then
+  network_state="ready"
+elif [ -n "$ip" ] || [ -n "$dns" ]; then
+  network_state="starting"
+else
+  network_state="stopped"
+fi
+
+printf '__WEBRUNNER_NET__|%s|%s|%s|%s\n' \
+  "${ip:-unknown}" "$network_state" "$route_state" "${dns:-unknown}"
