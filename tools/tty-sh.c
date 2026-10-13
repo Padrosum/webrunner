@@ -39,7 +39,12 @@ static void run_shell(void) {
   fail("shell başlatılamadı");
 }
 
-int main(void) {
+int main(int argc, char **argv) {
+  if (argc == 2 && strcmp(argv[1], "--version") == 0) {
+    puts("WebRunner tty helper 2");
+    return 0;
+  }
+
   // PID 1 cannot create a new session because it is already a process-group
   // leader. Run the interactive shell as a child so it can own the tty's
   // foreground process group; this makes job-control keys such as Ctrl+Z
