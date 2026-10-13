@@ -143,13 +143,14 @@
   function consumeNetworkStatusLine(character) {
     if (character !== "\r" && character !== "\n") {
       networkMarkerLine = `${networkMarkerLine}${character}`.slice(-256);
-      return;
+    } else {
+      networkMarkerLine = `${networkMarkerLine}${character}`.slice(-256);
     }
 
-    const match = networkMarkerLine.match(/__WEBRUNNER_NET__\|([^\r\n]*)/);
-    networkMarkerLine = "";
+    const match = networkMarkerLine.match(/__WEBRUNNER_NET__\|([^|\r\n]*)\|(starting|ready|stopped)\|([^|\r\n]*)\|([^|\r\n]*)\|(active|inactive)/);
     if (!match) return;
-    const [ip, torState, torVersion, exitIp, routeState] = match[1].split("|");
+    const [, ip, torState, torVersion, exitIp, routeState] = match;
+    networkMarkerLine = "";
     applyNetworkStatus(ip, torState, torVersion, exitIp, routeState);
   }
 

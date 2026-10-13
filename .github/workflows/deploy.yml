@@ -60,7 +60,7 @@ jobs:
             --file .github/docker/alpine/Dockerfile \
             --tag webrunner-alpine:latest .
           docker run --rm --platform linux/386 webrunner-alpine:latest \
-            /bin/sh -c 'test -x /usr/bin/webrunner-tty && test -x /usr/bin/webrunner-tor && ! grep -q "^PidFile " /etc/tor/torrc'
+            /bin/sh -c 'test -x /usr/bin/webrunner-tty && grep -aFq "PID 1 cannot create a new session" /usr/bin/webrunner-tty && test -x /usr/bin/webrunner-tor && ! grep -q "^PidFile " /etc/tor/torrc'
           alpine_container=$(docker create --platform linux/386 webrunner-alpine:latest)
           docker export "$alpine_container" --output "$RUNNER_TEMP/alpine-rootfs.tar"
           docker rm "$alpine_container"
